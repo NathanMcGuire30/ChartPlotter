@@ -1,7 +1,8 @@
 # ChartPlotter
 Python library to render NOAA charts
 
-Install GDAL
+Install GDAL:
+https://mothergeo-py.readthedocs.io/en/latest/development/how-to/gdal-ubuntu-pkg.html
 
 ~~~
 sudo add-apt-repository ppa:ubuntugis/ppa && sudo apt-get update
