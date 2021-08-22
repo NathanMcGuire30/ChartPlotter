@@ -13,6 +13,7 @@ def openFile() -> ogr.DataSource:
 
 def parseFeature(feat: ogr.Feature):
     print('   FEAT:' + str(feat.GetFID()))
+
     print(feat.geometry())
 
 

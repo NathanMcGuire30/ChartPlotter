@@ -8,13 +8,17 @@ from osgeo import gdal
 from osgeo import ogr
 
 RASTERIZE_COLOR_FIELD = "__color__"
+MIN_DEPTH_KEY = "DRVAL1"
+MAX_DEPTH_KEY = "DRVAL2"
 
-# Colors are BGR
+# Colors are RGB
 BLACK = [0, 0, 0]
 WHITE = [255, 255, 255]
 DK_GREY = [50, 50, 50]
-LAND_GREEN = [200, 226, 235]
-MARSH_GREEN = [175, 209, 193]
+LAND_GREEN = [226, 235, 200]
+MARSH_GREEN = [209, 193, 175]
+SHALLOW_WATER = [216, 240, 245]
+OBSTRUCTION = [100, 150, 150]
 
 
 def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
@@ -26,6 +30,8 @@ def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
         singleColor(layer, rasterImage, MARSH_GREEN)
     elif description == "DEPCNT":
         singleColor(layer, rasterImage, BLACK)
+    elif description == "DEPARE":
+        depthLayer(layer, rasterImage, SHALLOW_WATER)
     elif description == "FAIRWY":
         singleColor(layer, rasterImage, WHITE)
     elif description == "DRGARE":
@@ -40,35 +46,34 @@ def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
         singleColor(layer, rasterImage, BLACK)
     elif description == "UWTROC":
         singleColor(layer, rasterImage, BLACK)
-
-    # Unused ones
-    # elif description == "OBSTRN":
-    #     singleColor(layer, rasterImage, DK_GREY)
+    elif description == "OBSTRN":
+        singleColor(layer, rasterImage, OBSTRUCTION)
 
 
 def singleColor(layer, rasterImage, color):
     source_srs = layer.GetSpatialRef()
-
-    # Create a field in the source layer to hold the features colors
-    field_def = ogr.FieldDefn(RASTERIZE_COLOR_FIELD, ogr.OFTReal)
-    layer.CreateField(field_def)
-
-    # Color stuff
-    # layer_def = layer.GetLayerDefn()
-    # field_index = layer_def.GetFieldIndex(RASTERIZE_COLOR_FIELD)
-    # for feature in layer:
-    #     feature.SetField(field_index, color)
-    #     layer.SetFeature(feature)
-
     if source_srs:  # Make the target raster have the same projection as the source
         rasterImage.SetProjection(source_srs.ExportToWkt())
     else:  # Source has no projection (needs GDAL >= 1.7.0 to work)
         rasterImage.SetProjection('LOCAL_CS["arbitrary"]')
 
     # Rasterize
-    err = gdal.RasterizeLayer(rasterImage, (3, 2, 1), layer, burn_values=color)
+    err = gdal.RasterizeLayer(rasterImage, (1, 2, 3), layer, burn_values=color)
     if err != 0:
         raise Exception("error rasterizing layer: %s" % err)
 
-    rasterImage.GetRasterBand(1).SetNoDataValue(10000)
-    rasterImage.FlushCache()
+
+def depthLayer(layer, rasterImage, shallowColor):
+    for i in range(layer.GetFeatureCount()):
+        feature = layer.GetNextFeature()
+        minDepth = float(feature.GetField(MIN_DEPTH_KEY))
+        maxDepth = float(feature.GetField(MAX_DEPTH_KEY))
+        depth = (minDepth + maxDepth) / 2
+
+        if depth > 3:
+            layer.DeleteFeature(feature.GetFID())
+
+    # Rasterize
+    err = gdal.RasterizeLayer(rasterImage, (1, 2, 3), layer, burn_values=shallowColor)
+    if err != 0:
+        raise Exception("error rasterizing layer: %s" % err)
