@@ -37,4 +37,4 @@ if __name__ == '__main__':
     ctx.set_line_width(0.02)
     ctx.stroke()
 
-    surface.write_to_png("example.png")  # Output to PNG
+    surface.write_to_png("Test/Output/example.png")  # Output to PNG
