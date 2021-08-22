@@ -10,7 +10,7 @@ from osgeo import ogr
 
 class MapDraw():
     def __init__(self):
-        pass
+        self.datum = [None, None]
 
     def addPolygon(self, data):
         pass
@@ -24,25 +24,29 @@ def openFile() -> ogr.DataSource:
 
 
 def parseFeature(feat: ogr.Feature):
-    print('   FEAT:' + str(feat.GetFID()))
-    print(feat.geometry())
+    if "polygon" in str(feat.geometry()).lower():
+        # print('   FEAT:' + str(feat.GetFID()))
+        print(feat.geometry())
+        parseGeometry(feat.geometry())
+
+
+def parseGeometry(geo: ogr.Geometry):
+    #print(geo.Value())
+    print("HI")
 
 
 if __name__ == '__main__':
     file = openFile()
 
-    for i in range(file.GetLayerCount()):
+    for i in [1]:  # range(file.GetLayerCount())
         print(i)
         layer = file.GetLayerByIndex(i)
 
-        try:
-            desc = layer.GetDescription()
-            Nfeat = layer.GetFeatureCount()
-            print("Found %d features in layer %s" % (Nfeat, desc))
+        desc = layer.GetDescription()
+        Nfeat = layer.GetFeatureCount()
+        print("Found %d features in layer %s" % (Nfeat, desc))
 
-            for j in range(Nfeat):
-                feat = layer.GetNextFeature()
-                parseFeature(feat)
+        for j in range(Nfeat):
+            feat = layer.GetNextFeature()
+            parseFeature(feat)
 
-        except:
-            print("Error on layer " + str(i))
