@@ -21,6 +21,42 @@ SHALLOW_WATER = [216, 240, 245]
 OBSTRUCTION = [100, 150, 150]
 
 
+# TODO: Make layers less hardcoded
+
+def appendToList(outList, layerDictionary, key):
+    if key in layerDictionary:
+        outList.append(layerDictionary[key])
+
+
+def sortLayers(file: ogr.DataSource):
+    # 7: Buoys
+    # 13: Towers on rocks in woods hole
+    # 41: Depth soundings
+
+    layerDictionary = {}
+
+    for i in range(file.GetLayerCount()):
+        layer = file.GetLayerByIndex(i)
+        desc = layer.GetDescription()
+        layerDictionary[desc] = i
+
+    outList = []  # Put things into the right order
+    appendToList(outList, layerDictionary, "LNDARE")
+    appendToList(outList, layerDictionary, "LNDRGN")
+    appendToList(outList, layerDictionary, "BUISGL")
+    appendToList(outList, layerDictionary, "BRIDGE")
+    appendToList(outList, layerDictionary, "DEPARE")
+    appendToList(outList, layerDictionary, "DEPCNT")
+    appendToList(outList, layerDictionary, "OBSTRN")
+    appendToList(outList, layerDictionary, "FAIRWY")
+    appendToList(outList, layerDictionary, "DRGARE")
+    appendToList(outList, layerDictionary, "COALNE")
+    appendToList(outList, layerDictionary, "SLCONS")
+    appendToList(outList, layerDictionary, "UWTROC")
+
+    return outList
+
+
 def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
     description = layer.GetDescription()
 
@@ -64,6 +100,8 @@ def singleColor(layer, rasterImage, color):
 
 
 def depthLayer(layer, rasterImage, shallowColor):
+    # TODO: Scale depth cutoff
+
     for i in range(layer.GetFeatureCount()):
         feature = layer.GetNextFeature()
         minDepth = float(feature.GetField(MIN_DEPTH_KEY))

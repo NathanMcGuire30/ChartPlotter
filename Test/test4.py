@@ -14,7 +14,7 @@ RASTERIZE_COLOR_FIELD = "__color__"
 
 
 def openFile() -> ogr.DataSource:
-    return ogr.Open("../Charts/US5MA28M/ENC_ROOT/US5MA28M/US5MA28M.000")
+    return ogr.Open("../Charts/a/ENC_ROOT/a/a.000")
 
 
 def boxDimensions(bounds):

@@ -7,8 +7,8 @@ Test script that prints out all the features from a NOAA chart
 from osgeo import ogr
 
 
-def openFile() -> ogr.DataSource:
-    return ogr.Open("Charts/US5MA28M/ENC_ROOT/US5MA28M/US5MA28M.000")
+def openFile(chartName) -> ogr.DataSource:
+    return ogr.Open("Charts/{0}/{0}.000".format(chartName))
 
 
 def parseFeature(feat: ogr.Feature):
@@ -18,7 +18,7 @@ def parseFeature(feat: ogr.Feature):
 
 
 if __name__ == '__main__':
-    file = openFile()
+    file = openFile("US5MA28M")
 
     for i in range(file.GetLayerCount()):
         layer = file.GetLayerByIndex(i)
