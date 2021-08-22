@@ -17,7 +17,7 @@ def openFile() -> ogr.DataSource:
     return ogr.Open("../Charts/US5MA28M/ENC_ROOT/US5MA28M/US5MA28M.000")
 
 
-def rasterize(orig_data_source, layer, pixel_size=25):
+def rasterize(orig_data_source, layer):
     # Make a copy of the layer's data source because we'll need to
     # modify its attributes table
     source_ds = ogr.GetDriverByName("Memory").CopyDataSource(orig_data_source, "")
@@ -41,11 +41,13 @@ def rasterize(orig_data_source, layer, pixel_size=25):
         feature.SetField(field_index, random.randint(0, 255))
         source_layer.SetFeature(feature)
     # Create the destination data source
+
+    pixel_size = 0.0001
     x_res = int((x_max - x_min) / pixel_size)
     y_res = int((y_max - y_min) / pixel_size)
-    target_ds = gdal.GetDriverByName('GTiff').Create('test{}.tif'.format(layer), 1000, 1000, 3, gdal.GDT_Byte)
 
-    target_ds.SetGeoTransform((0, pixel_size, 0, 1000, 0, -pixel_size))
+    target_ds = gdal.GetDriverByName('GTiff').Create('Output/test{}.tif'.format(layer), 1000, 1000, 3, gdal.GDT_Byte)
+    target_ds.SetGeoTransform((x_min, pixel_size, 0, y_max, 0, -pixel_size))
 
     if source_srs:
         # Make the target raster have the same projection as the source
@@ -67,4 +69,7 @@ if __name__ == '__main__':
     file = openFile()
 
     for i in range(file.GetLayerCount()):
-        rasterize(file, i)
+        try:
+            rasterize(file, i)
+        except Exception as e:
+            print(e)

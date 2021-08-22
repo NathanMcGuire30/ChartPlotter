@@ -31,7 +31,7 @@ def parseFeature(feat: ogr.Feature):
 
 
 def parseGeometry(geo: ogr.Geometry):
-    #print(geo.Value())
+    # print(geo.Value())
     print("HI")
 
 
@@ -49,4 +49,3 @@ if __name__ == '__main__':
         for j in range(Nfeat):
             feat = layer.GetNextFeature()
             parseFeature(feat)
-
