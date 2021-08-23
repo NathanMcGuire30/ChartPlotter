@@ -39,24 +39,28 @@ def getFileBounds(fileData):
                 bounds = [x_min, x_max, y_min, y_max]
             else:
                 bounds[0] = min(bounds[0], x_min)
-                bounds[1] = min(bounds[1], x_max)
+                bounds[1] = max(bounds[1], x_max)
                 bounds[2] = min(bounds[2], y_min)
-                bounds[3] = min(bounds[3], y_max)
+                bounds[3] = max(bounds[3], y_max)
 
     return bounds
 
 
-if __name__ == '__main__':
-    chartName = "US5MA28M"
-    file = openFile(chartName)
-    bounds = getFileBounds(file)
-
+def parseSingleChart(file, rasterImage):
     # Make a copy of the file so we can modify stuff
     vectorSource = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
 
-    # Raster image size
-    width_px = 1000
+    sortedLayers = sortLayers(file)
 
+    for layerNumber in sortedLayers:
+        try:
+            layer = vectorSource.GetLayer(layerNumber)
+            rasterizeSingleLayer(layer, rasterImage)
+        except Exception as e:
+            print(e)
+
+
+def createRasterImage(bounds, width_px, fileName="Output"):
     # Figure out the pixel size and stuff for everything
     [x_min, x_max, y_min, y_max] = bounds  # These are lat and lon values (x is lon, y is lat)
     [xLengthMeters, yLengthMeters] = boxDimensions(bounds)  # Convert to x and y size
@@ -66,15 +70,41 @@ if __name__ == '__main__':
     pixelSizeY = (y_max - y_min) / height_px
 
     driver = gdal.GetDriverByName('GTiff')
-    rasterImage = driver.Create('{}.tif'.format("Output"), width_px, height_px, 3, gdal.GDT_Byte)
+    rasterImage = driver.Create('{}.tif'.format(fileName), width_px, height_px, 3, gdal.GDT_Byte)
     rasterImage.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, -pixelSizeY))
-    rasterImage.GetRasterBand(1).SetNoDataValue(10000)
+    rasterImage.GetRasterBand(1).SetNoDataValue(1000)
 
-    sortedLayers = sortLayers(file)
+    return rasterImage
 
-    for layerNumber in sortedLayers:
-        try:
-            layer = vectorSource.GetLayer(layerNumber)
-            image = rasterizeSingleLayer(layer, rasterImage)
-        except Exception as e:
-            print(e)
+
+def getBoundsOverMultipleCharts(fileData):
+    bounds = []
+
+    for file in fileData:
+        [x_min, x_max, y_min, y_max] = getFileBounds(file)
+
+        if len(bounds) == 0:
+            bounds = [x_min, x_max, y_min, y_max]
+        else:
+            bounds[0] = min(bounds[0], x_min)
+            bounds[1] = max(bounds[1], x_max)
+            bounds[2] = min(bounds[2], y_min)
+            bounds[3] = max(bounds[3], y_max)
+
+    return bounds
+
+
+def parseCharts(chartNames, fileName):
+    files = [openFile(chartName) for chartName in chartNames]
+    bounds = getBoundsOverMultipleCharts(files)
+    width_px = 1000
+    rasterImage = createRasterImage(bounds, width_px, fileName=fileName)
+
+    for file in files:
+        parseSingleChart(file, rasterImage)
+
+
+if __name__ == '__main__':
+    parseCharts(["US5MA28M"], "TestOutputs/WH")
+    parseCharts(["US4MA14M", "US4MA43M"], "TestOutputs/CC")
+    parseCharts(["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"], "TestOutputs/BB")

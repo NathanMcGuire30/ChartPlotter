@@ -42,8 +42,10 @@ def sortLayers(file: ogr.DataSource):
 
     outList = []  # Put things into the right order
     appendToList(outList, layerDictionary, "LNDARE")
+    appendToList(outList, layerDictionary, "LAKARE")
     appendToList(outList, layerDictionary, "LNDRGN")
     appendToList(outList, layerDictionary, "BUISGL")
+    appendToList(outList, layerDictionary, "RIVERS")
     appendToList(outList, layerDictionary, "BRIDGE")
     appendToList(outList, layerDictionary, "DEPARE")
     appendToList(outList, layerDictionary, "DEPCNT")
@@ -53,6 +55,12 @@ def sortLayers(file: ogr.DataSource):
     appendToList(outList, layerDictionary, "COALNE")
     appendToList(outList, layerDictionary, "SLCONS")
     appendToList(outList, layerDictionary, "UWTROC")
+    appendToList(outList, layerDictionary, "NAVLNE")
+    appendToList(outList, layerDictionary, "PIPSOL")
+    appendToList(outList, layerDictionary, "PONTON")
+    appendToList(outList, layerDictionary, "RECTRC")
+    appendToList(outList, layerDictionary, "SBDARE")
+    appendToList(outList, layerDictionary, "WRECKS")
 
     return outList
 
@@ -84,6 +92,24 @@ def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
         singleColor(layer, rasterImage, BLACK)
     elif description == "OBSTRN":
         singleColor(layer, rasterImage, OBSTRUCTION)
+    elif description == "LAKARE":
+        singleColor(layer, rasterImage, SHALLOW_WATER)
+    elif description == "PIPSOL":
+        singleColor(layer, rasterImage, BLACK)
+    elif description == "PONTON":
+        singleColor(layer, rasterImage, BLACK)
+    elif description == "RECTRC":
+        singleColor(layer, rasterImage, BLACK)
+    elif description == "RIVERS":
+        singleColor(layer, rasterImage, SHALLOW_WATER)
+    # elif description == "SBDARE":
+    # singleColor(layer, rasterImage, MARSH_GREEN)
+    elif description == "WRECKS":
+        singleColor(layer, rasterImage, SHALLOW_WATER)
+
+    # UNUSED
+    # elif description == "NAVLNE":
+    # singleColor(layer, rasterImage, BLACK)
 
 
 def singleColor(layer, rasterImage, color):

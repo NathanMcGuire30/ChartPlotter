@@ -13,8 +13,8 @@ from osgeo import ogr
 RASTERIZE_COLOR_FIELD = "__color__"
 
 
-def openFile() -> ogr.DataSource:
-    return ogr.Open("../Charts/a/ENC_ROOT/a/a.000")
+def openFile(chartName) -> ogr.DataSource:
+    return ogr.Open("../Charts/{0}/{0}.000".format(chartName))
 
 
 def boxDimensions(bounds):
@@ -88,7 +88,7 @@ def getFileBounds(fileData):
 
 if __name__ == '__main__':
     print("Start")
-    file = openFile()
+    file = openFile("US5MA28M")
     bounds = getFileBounds(file)
     print("Raster")
 
