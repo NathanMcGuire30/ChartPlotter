@@ -1,11 +1,146 @@
 #!/usr/bin/env python3
 
 """
-Uses osgeo rasterize function to turn vector charts into raster ones
+Uses osgeo rasterize function to turn NOAA vector charts into png images
 """
+
+import os
+import numpy
+import navpy
 
 from osgeo import gdal
 from osgeo import ogr
+
+from ChartLayers.LayerCore import LayerCore
+
+
+class NOAALayer(LayerCore):
+    def __init__(self):
+        super(NOAALayer, self).__init__()
+        rootDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        chartDir = os.path.join(rootDir, "Charts", "NOAA")
+
+        # TODO: load all files, and figure out their bounds
+        self.dataSourceNames = ["US5MA28M"]
+
+        self.files = {}
+        for file in self.dataSourceNames:
+            chartPath = os.path.join(chartDir, "{0}".format(file), "{0}.000".format(file))
+            self.files[file] = ogr.Open(chartPath)
+
+        # TODO: MASKS
+
+    def plotChart(self, lowerLeft, upperRight, width_px):
+        bounds = [lowerLeft[1], upperRight[1], lowerLeft[0], upperRight[0]]
+        rasterImage = createRasterImage(bounds, width_px)
+
+        for file in self.files.values():
+            parseSingleChart(file, rasterImage)
+
+        imageChannels = rasterImage.ReadAsArray()
+        cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
+        rasterImage = None
+
+        return cv2Image
+
+    def plotWholeChart(self, chartNames, width_px):
+        chartsToUse = []
+        for name in chartNames:
+            if name in self.files:
+                chartsToUse.append(self.files[name])
+            else:
+                return
+
+        bounds = getBoundsOverMultipleCharts(chartsToUse)
+        rasterImage = createRasterImage(bounds, width_px)
+
+        for file in chartsToUse:
+            parseSingleChart(file, rasterImage)
+
+        imageChannels = rasterImage.ReadAsArray()
+        cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
+        rasterImage = None
+
+        return cv2Image
+
+
+def boxDimensions(bounds):
+    [lon_min, lon_max, lat_min, lat_max] = bounds
+
+    ned = navpy.lla2ned(lat_max, lon_max, 0, lat_min, lon_min, 0)
+    n = ned[0]
+    e = ned[1]
+
+    return [e, n]
+
+
+def getFileBounds(fileData):
+    bounds = []
+
+    for i in range(fileData.GetLayerCount()):
+        layer = fileData.GetLayer(i)
+        x_min, x_max, y_min, y_max = layer.GetExtent()
+        if abs(x_min - x_max) > 0.000001 and abs(y_min - y_max) > 0.000001:  # Some layers are very small, so we don't care about them
+            if len(bounds) == 0:
+                bounds = [x_min, x_max, y_min, y_max]
+            else:
+                bounds[0] = min(bounds[0], x_min)
+                bounds[1] = max(bounds[1], x_max)
+                bounds[2] = min(bounds[2], y_min)
+                bounds[3] = max(bounds[3], y_max)
+
+    return bounds
+
+
+def parseSingleChart(file, rasterImage):
+    # Make a copy of the file so we can modify stuff
+    vectorSource = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
+
+    sortedLayers = sortLayers(file)
+
+    for layerNumber in sortedLayers:
+        try:
+            layer = vectorSource.GetLayer(layerNumber)
+            rasterizeSingleLayer(layer, rasterImage)
+        except Exception as e:
+            print(e)
+
+
+def createRasterImage(bounds, width_px):
+    # Figure out the pixel size and stuff for everything
+    [x_min, x_max, y_min, y_max] = bounds  # These are lat and lon values (x is lon, y is lat)
+    [xLengthMeters, yLengthMeters] = boxDimensions(bounds)  # Convert to x and y size
+    pixelsPerMeter = float(width_px) / float(xLengthMeters)  # Figure out how tall the image should be based on how wide it is
+    height_px = int(yLengthMeters * pixelsPerMeter)
+    pixelSizeX = (x_max - x_min) / width_px  # Figure out pixel size in lat and lon
+    pixelSizeY = (y_max - y_min) / height_px
+
+    driver = gdal.GetDriverByName('MEM')
+    rasterImage = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
+    rasterImage.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, -pixelSizeY))
+    rasterImage.GetRasterBand(1).SetNoDataValue(1000)
+
+    return rasterImage
+
+
+def getBoundsOverMultipleCharts(fileData):
+    bounds = []
+
+    for file in fileData:
+        [x_min, x_max, y_min, y_max] = getFileBounds(file)
+
+        if len(bounds) == 0:
+            bounds = [x_min, x_max, y_min, y_max]
+        else:
+            bounds[0] = min(bounds[0], x_min)
+            bounds[1] = max(bounds[1], x_max)
+            bounds[2] = min(bounds[2], y_min)
+            bounds[3] = max(bounds[3], y_max)
+
+    return bounds
+
+
+"""NOAA LAYER CONVERSIONS"""
 
 RASTERIZE_COLOR_FIELD = "__color__"
 MIN_DEPTH_KEY = "DRVAL1"
