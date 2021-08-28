@@ -4,14 +4,15 @@
 Uses osgeo rasterize function to turn vector charts into raster ones
 """
 
+import numpy
 import navpy
+import cv2
+import osgeo.gdal
 
 from osgeo import gdal
 from osgeo import ogr
 
 from LayerConversions import rasterizeSingleLayer, sortLayers
-
-RASTERIZE_COLOR_FIELD = "__color__"
 
 
 def openFile(chartName) -> ogr.DataSource:
@@ -60,7 +61,7 @@ def parseSingleChart(file, rasterImage):
             print(e)
 
 
-def createRasterImage(bounds, width_px, fileName="Output"):
+def createRasterImage(bounds, width_px):
     # Figure out the pixel size and stuff for everything
     [x_min, x_max, y_min, y_max] = bounds  # These are lat and lon values (x is lon, y is lat)
     [xLengthMeters, yLengthMeters] = boxDimensions(bounds)  # Convert to x and y size
@@ -69,8 +70,8 @@ def createRasterImage(bounds, width_px, fileName="Output"):
     pixelSizeX = (x_max - x_min) / width_px  # Figure out pixel size in lat and lon
     pixelSizeY = (y_max - y_min) / height_px
 
-    driver = gdal.GetDriverByName('GTiff')
-    rasterImage = driver.Create('{}.tif'.format(fileName), width_px, height_px, 3, gdal.GDT_Byte)
+    driver = gdal.GetDriverByName('MEM')
+    rasterImage = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
     rasterImage.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, -pixelSizeY))
     rasterImage.GetRasterBand(1).SetNoDataValue(1000)
 
@@ -94,17 +95,24 @@ def getBoundsOverMultipleCharts(fileData):
     return bounds
 
 
-def parseCharts(chartNames, fileName):
+def parseCharts(chartNames):
     files = [openFile(chartName) for chartName in chartNames]
     bounds = getBoundsOverMultipleCharts(files)
     width_px = 1000
-    rasterImage = createRasterImage(bounds, width_px, fileName=fileName)
+    rasterImage = createRasterImage(bounds, width_px)
 
     for file in files:
         parseSingleChart(file, rasterImage)
 
+    imageChannels = rasterImage.ReadAsArray()
+    cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
+    rasterImage = None
+
+    cv2.imshow("A", cv2Image)
+    cv2.waitKey()
+
 
 if __name__ == '__main__':
-    parseCharts(["US5MA28M"], "TestOutputs/WH")
-    parseCharts(["US4MA14M", "US4MA43M"], "TestOutputs/CC")
-    parseCharts(["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"], "TestOutputs/BB")
+    parseCharts(["US5MA28M"])
+    # parseCharts(["US4MA14M", "US4MA43M"])
+    # parseCharts(["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"])

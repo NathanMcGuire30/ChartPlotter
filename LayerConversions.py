@@ -125,8 +125,12 @@ def singleColor(layer, rasterImage, color):
         raise Exception("error rasterizing layer: %s" % err)
 
 
-def depthLayer(layer, rasterImage, shallowColor):
+def depthLayer(layer: ogr.Layer, rasterImage: gdal.Dataset, shallowColor):
     # TODO: Scale depth cutoff
+
+    # Make temp place to store deep water areas, so we can rasterize them white
+    source = ogr.GetDriverByName('MEMORY').CreateDataSource('memData')
+    deepLayer = source.CreateLayer("DEEP", layer.GetSpatialRef())
 
     for i in range(layer.GetFeatureCount()):
         feature = layer.GetNextFeature()
@@ -135,9 +139,11 @@ def depthLayer(layer, rasterImage, shallowColor):
         depth = (minDepth + maxDepth) / 2
 
         if depth > 3:
+            deepLayer.SetFeature(feature)
             layer.DeleteFeature(feature.GetFID())
 
     # Rasterize
     err = gdal.RasterizeLayer(rasterImage, (1, 2, 3), layer, burn_values=shallowColor)
-    if err != 0:
+    err1 = gdal.RasterizeLayer(rasterImage, (1, 2, 3), deepLayer, burn_values=WHITE)
+    if err != 0 or err1 != 0:
         raise Exception("error rasterizing layer: %s" % err)
