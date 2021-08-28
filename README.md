@@ -1,4 +1,5 @@
 # ChartPlotter
+
 Python library to render NOAA charts
 
 ## Install
@@ -16,20 +17,30 @@ export C_INCLUDE_PATH=/usr/include/gdal
 pip3 install GDAL
 ~~~
 
-
 `sudo apt install python3-gdal` also seems to work
 
 Also requires NavPY and shapley
 
 ## Charts:
-I use the NOAA vector charts, because they are dropping support for all else. 
-I downloaded the zip file from their website for the Woods Hole Passage chart and extracted its contents into a folder called
+
+I use the NOAA vector charts, because they are dropping support for all else. I download the zip from their website, and put the folder in ENC_ROOT into a folder called
 `ChartPlotter/Charts`.
 
 ## Description
-Currently, test4.py is my development script.  It rasterizes the charts and saves each layer as a .tiff.
 
-Reference layers from Woods Hole Passage
+ChartPlotter.py is the core piece of code currently. It will rasterize the chart and output a OpenCV style image (numpy array). This system is supposed to be modular and support more than NOAA charts, so I'm structuring everything in layers. NOAA
+charts are currently the only layer, but I'm planning on adding USGS topo maps, and maybe some satellite imagery. The classes that render a specific layer live in the `ChartLayers` folder.
+
+### Extra test code
+
+Currently, test4.py is my development script. It rasterizes the charts and saves each layer as a .tiff.
+
+### Reference layers from Woods Hole Passage
+
+These are specific to the NOAA US5MA28M chart.
+
+The meanings I've figured out:
+
 - 4: Bridges
 - 5: Buildings
 - 7: Buoys
@@ -37,7 +48,7 @@ Reference layers from Woods Hole Passage
 - 13: Towers on rocks in woods hole
 - 14: Depth areas
 - 15: Depth contours
-- 16: Channels
+- 16: Channels (Dredging)
 - 17: Channels v2
 - 21: Land
 - 23: Marsh
@@ -47,6 +58,8 @@ Reference layers from Woods Hole Passage
 - 39: Rocky edges?
 - 41: Depth soundings
 - 42: Rocks
+
+The complete list of descriptions as parsed by gdal/ogr
 
 0 DSID  
 1 ACHARE  

@@ -6,7 +6,6 @@ ChartPlotter
 A configurable system for drawing charts
 """
 
-import cv2
 import navpy
 
 from ChartLayers.NOAALayer import NOAALayer
@@ -20,7 +19,7 @@ class ChartPlotter(object):
 
         self.layers = ["NOAA"]
 
-    def plotChartMeters(self, lowerLeft, width, height, pixelsPerMeter):
+    def plotChartPixels(self, lowerLeft, width, height, pixelsPerMeter):
         """Plots chart based on the lower left corner and image size"""
         widthMeters = width / pixelsPerMeter
         heightMeters = height / pixelsPerMeter
