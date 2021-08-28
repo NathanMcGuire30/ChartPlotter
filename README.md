@@ -19,7 +19,7 @@ pip3 install GDAL
 
 `sudo apt install python3-gdal` also seems to work
 
-Also requires NavPY
+Also requires NavPY and shapley
 
 ## Charts:
 I use the NOAA vector charts, because they are dropping support for all else. 

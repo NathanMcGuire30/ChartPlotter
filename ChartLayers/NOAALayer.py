@@ -8,10 +8,19 @@ import os
 import numpy
 import navpy
 
+from shapely.geometry import Polygon
+from dataclasses import dataclass
 from osgeo import gdal
 from osgeo import ogr
 
 from ChartLayers.LayerCore import LayerCore
+
+
+@dataclass
+class ChartInfo(object):
+    name: str
+    chartData: ogr.DataSource
+    coverage: list
 
 
 class NOAALayer(LayerCore):
@@ -21,21 +30,38 @@ class NOAALayer(LayerCore):
         chartDir = os.path.join(rootDir, "Charts", "NOAA")
 
         # TODO: load all files, and figure out their bounds
-        self.dataSourceNames = ["US5MA28M"]
+        self.dataSourceNames = ["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"]
 
         self.files = {}
         for file in self.dataSourceNames:
             chartPath = os.path.join(chartDir, "{0}".format(file), "{0}.000".format(file))
-            self.files[file] = ogr.Open(chartPath)
+            self.files[file] = ChartInfo(name=file, chartData=ogr.Open(chartPath), coverage=[])
+            self.files[file].coverage = self.getDataRegion(file)
 
         # TODO: MASKS
+
+    def getNeededCharts(self, lowerLeft, upperRight):
+        chartList = []
+        p1 = Polygon([(lowerLeft[1], lowerLeft[0]), (lowerLeft[1], upperRight[0]), (upperRight[1], upperRight[0]), (upperRight[1], lowerLeft[0])])
+
+        for file in self.files:
+            coverage = self.files[file].coverage
+            for polygon in coverage:
+                p2 = Polygon(polygon)
+                if p1.intersects(p2):
+                    if file not in chartList:
+                        chartList.append(file)
+
+        return chartList
 
     def plotChart(self, lowerLeft, upperRight, width_px):
         bounds = [lowerLeft[1], upperRight[1], lowerLeft[0], upperRight[0]]
         rasterImage = createRasterImage(bounds, width_px)
+        chartList = self.getNeededCharts(lowerLeft, upperRight)  # Only rasterize the charts we need
 
-        for file in self.files.values():
-            parseSingleChart(file, rasterImage)
+        for file in chartList:
+            chart = self.files[file].chartData
+            parseSingleChart(chart, rasterImage)
 
         imageChannels = rasterImage.ReadAsArray()
         cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
@@ -44,24 +70,51 @@ class NOAALayer(LayerCore):
         return cv2Image
 
     def plotWholeChart(self, chartNames, width_px):
-        chartsToUse = []
+        chartsToUse = {}
         for name in chartNames:
             if name in self.files:
-                chartsToUse.append(self.files[name])
+                chartsToUse[name] = self.files[name].chartData
             else:
                 return
 
-        bounds = getBoundsOverMultipleCharts(chartsToUse)
+        bounds = getBoundsOverMultipleCharts(chartsToUse.values())
         rasterImage = createRasterImage(bounds, width_px)
 
         for file in chartsToUse:
-            parseSingleChart(file, rasterImage)
+            parseSingleChart(chartsToUse[file], rasterImage)
 
         imageChannels = rasterImage.ReadAsArray()
         cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
         rasterImage = None
 
         return cv2Image
+
+    def getDataRegion(self, file):
+        dataSet = self.files[file].chartData
+        coverageLayerIndex = -1
+        coverageList = []
+
+        for coverageLayerIndex in range(dataSet.GetLayerCount()):
+            layer = dataSet.GetLayerByIndex(coverageLayerIndex)
+            if layer.GetDescription() == "M_COVR":
+                break
+
+        layer = dataSet.GetLayerByIndex(coverageLayerIndex)
+        Nfeat = layer.GetFeatureCount()
+        for j in range(Nfeat - 1):  # The last feature is the full rectangle bounding box
+            pointsList = []
+
+            feat = layer.GetNextFeature()
+            geom = feat.GetGeometryRef()
+            ring = geom.GetGeometryRef(0)
+            points = ring.GetPointCount()
+            for p in range(points):
+                lon, lat, z = ring.GetPoint(p)
+                pointsList.append((lon, lat))
+
+            coverageList.append(pointsList)
+
+        return coverageList
 
 
 def boxDimensions(bounds):
@@ -156,8 +209,6 @@ SHALLOW_WATER = [216, 240, 245]
 OBSTRUCTION = [100, 150, 150]
 
 
-# TODO: Make layers less hardcoded
-
 def appendToList(outList, layerDictionary, key):
     if key in layerDictionary:
         outList.append(layerDictionary[key])
@@ -167,6 +218,7 @@ def sortLayers(file: ogr.DataSource):
     # 7: Buoys
     # 13: Towers on rocks in woods hole
     # 41: Depth soundings
+    # Coverage: M_COVR
 
     layerDictionary = {}
 

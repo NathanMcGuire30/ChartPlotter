@@ -4,6 +4,7 @@
 Uses osgeo rasterize function to turn vector charts into raster ones
 """
 
+import os
 import random
 import navpy
 
@@ -14,7 +15,10 @@ RASTERIZE_COLOR_FIELD = "__color__"
 
 
 def openFile(chartName) -> ogr.DataSource:
-    return ogr.Open("../Charts/{0}/{0}.000".format(chartName))
+    rootDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    chartDir = os.path.join(rootDir, "Charts", "NOAA")
+    chartPath = os.path.join(chartDir, "{0}".format(chartName), "{0}.000".format(chartName))
+    return ogr.Open(chartPath)
 
 
 def boxDimensions(bounds):
@@ -27,8 +31,9 @@ def boxDimensions(bounds):
     return [e, n]
 
 
-def rasterizeSingleLayer(layer, layerNum, bounds, width_px=1000):
+def rasterizeSingleLayer(layer: ogr.Layer, layerNum, bounds, width_px=1000):
     source_srs = layer.GetSpatialRef()
+    print(layerNum, layer.GetDescription())
 
     # Create a field in the source layer to hold the features colors
     field_def = ogr.FieldDefn(RASTERIZE_COLOR_FIELD, ogr.OFTReal)
