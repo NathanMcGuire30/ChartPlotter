@@ -4,6 +4,7 @@ import threading
 
 import cv2
 import imutils
+import numpy
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import QTimer
@@ -14,19 +15,47 @@ from ChartPlotter import ChartPlotter
 
 
 class MapWidget(QLabel):
-    def __init__(self, QWidget=None):
+    def __init__(self, chartPlotter, QWidget=None):
         super(MapWidget, self).__init__(QWidget)
 
-    def updateImage(self, image):
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        self.chartPlotter = chartPlotter
+
+        self.lat = 41.51663
+        self.lon = -70.6988197
+        self.pixel_per_meter = 0.5
+        self.pixelOffset = [0, 0]
+        self.mouseDownPos = [0, 0]
+
+        print("A")
+        self.image = self.chartPlotter.plotChartPixels([self.lat, self.lon], 2000, 1000, self.pixel_per_meter)
+        print("B")
+
+    def updateImage(self):
+        image = cv2.cvtColor(self.image, cv2.COLOR_RGB2BGR)
 
         imageWidth = 4 * round(int(self.width()) / 4)
         image = imutils.resize(image, width=imageWidth)
+        [height, width, _] = image.shape
 
-        convertToQtFormat = QtGui.QImage(image.data, image.shape[1], image.shape[0], QtGui.QImage.Format_RGB888)
+        section = image[0:height - self.pixelOffset[1], 0:width - self.pixelOffset[0]]
+        [sectionHeight, sectionWidth, _] = section.shape
+
+        newImage = numpy.zeros(image.shape, dtype=numpy.uint8)
+        newImage[height - sectionHeight:, width - sectionWidth:] = section
+
+        convertToQtFormat = QtGui.QImage(newImage.data, newImage.shape[1], newImage.shape[0], QtGui.QImage.Format_RGB888)
         convertToQtFormat = QtGui.QPixmap.fromImage(convertToQtFormat)
         pixmap = QPixmap(convertToQtFormat)
         self.setPixmap(pixmap)
+
+    def mousePressEvent(self, ev: QtGui.QMouseEvent) -> None:
+        self.mouseDownPos = [self.pixelOffset[0] - ev.x(), self.pixelOffset[1] - ev.y()]
+
+    def mouseMoveEvent(self, ev: QtGui.QMouseEvent) -> None:
+        self.pixelOffset = [ev.x() + self.mouseDownPos[0], ev.y() + self.mouseDownPos[1]]
+
+    def mouseReleaseEvent(self, ev: QtGui.QMouseEvent) -> None:
+        print("BYE")
 
 
 class MapGUI(threading.Thread):
@@ -34,7 +63,6 @@ class MapGUI(threading.Thread):
         self.appWindow = None
 
         self.chartPlotter = ChartPlotter()
-        self.image = self.chartPlotter.plotChartPixels([41.51663, -70.6988197], 2000, 1000, 0.5)
 
         # Start the thread
         threading.Thread.__init__(self)
@@ -52,12 +80,10 @@ class MapGUI(threading.Thread):
         tabHolderWidget.addTab(tab1, "Tab 1")
         tabHolderWidget.addTab(tab2, "Tab 2")
 
-        self.mapWidget = MapWidget(tab1)
+        self.mapWidget = MapWidget(self.chartPlotter, tab1)
         layout = QGridLayout()
         layout.addWidget(self.mapWidget)
         tab1.setLayout(layout)
-
-        self.mapWidget.updateImage(self.image)
 
         # QTimer to run the update method
         timer = QTimer()
@@ -71,7 +97,7 @@ class MapGUI(threading.Thread):
 
     def updateGUI(self):
         self.app.update()
-        self.mapWidget.updateImage(self.image)
+        self.mapWidget.updateImage()
 
 
 if __name__ == '__main__':
