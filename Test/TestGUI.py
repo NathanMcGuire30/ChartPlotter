@@ -18,9 +18,12 @@ class MapWidget(QLabel):
         super(MapWidget, self).__init__(QWidget)
 
     def updateImage(self, image):
-        image = imutils.resize(image, width=int(self.width()))
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-        convertToQtFormat = QtGui.QImage(image.data, image.shape[1], image.shape[0], QtGui.QImage.Format_ARGB32)
+        imageWidth = 4 * round(int(self.width()) / 4)
+        image = imutils.resize(image, width=imageWidth)
+
+        convertToQtFormat = QtGui.QImage(image.data, image.shape[1], image.shape[0], QtGui.QImage.Format_RGB888)
         convertToQtFormat = QtGui.QPixmap.fromImage(convertToQtFormat)
         pixmap = QPixmap(convertToQtFormat)
         self.setPixmap(pixmap)

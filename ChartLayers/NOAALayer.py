@@ -29,9 +29,10 @@ class NOAALayer(LayerCore):
         rootDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         chartDir = os.path.join(rootDir, "Charts", "NOAA")
 
-        # TODO: load all files, and figure out their bounds
-        self.dataSourceNames = ["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"]
+        # Gets list of all the directories in Charts/NOAA
+        self.dataSourceNames = next(os.walk(chartDir))[1]
 
+        # Loop through and figure out bounds
         self.files = {}
         for file in self.dataSourceNames:
             chartPath = os.path.join(chartDir, "{0}".format(file), "{0}.000".format(file))
