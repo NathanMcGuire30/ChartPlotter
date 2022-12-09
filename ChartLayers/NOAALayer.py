@@ -322,9 +322,9 @@ def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color):
 
     for i in range(layer.GetFeatureCount()):
         feature = layer.GetNextFeature()
-        minDepth = float(feature.GetField(MIN_DEPTH_KEY))
-        maxDepth = float(feature.GetField(MAX_DEPTH_KEY))
-        depth = (minDepth + maxDepth) / 2
+        min_depth = float(feature.GetField(MIN_DEPTH_KEY))
+        max_depth = float(feature.GetField(MAX_DEPTH_KEY))
+        depth = (min_depth + max_depth) / 2
 
         if depth > 3:
             deep_layer.SetFeature(feature)
