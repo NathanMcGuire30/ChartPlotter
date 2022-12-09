@@ -42,7 +42,7 @@ class NOAALayer(LayerCore):
         # TODO: MASKS
 
     def getNeededCharts(self, lower_left, upper_right):
-        chartList = []
+        chart_list = []
         p1 = Polygon([(lower_left[1], lower_left[0]), (lower_left[1], upper_right[0]), (upper_right[1], upper_right[0]), (upper_right[1], lower_left[0])])
 
         for file in self.files:
@@ -50,10 +50,10 @@ class NOAALayer(LayerCore):
             for polygon in coverage:
                 p2 = Polygon(polygon)
                 if p1.intersects(p2):
-                    if file not in chartList:
-                        chartList.append(file)
+                    if file not in chart_list:
+                        chart_list.append(file)
 
-        return chartList
+        return chart_list
 
     def plotChart(self, lower_left, upper_right, width_px):
         bounds = [lower_left[1], upper_right[1], lower_left[0], upper_right[0]]
