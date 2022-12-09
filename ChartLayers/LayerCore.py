@@ -7,11 +7,11 @@ Test code for ChartPlotter
 
 class LayerCore(object):
     def __init__(self):
-        self.dataSourceNames = []
+        self.data_source_names = []
 
-    def plotChart(self, lowerLeft, upperRight, width_px):
+    def plotChart(self, lower_left, upper_right, width_px):
         """Plots chart based on lat-lon coordinates"""
         return None
 
     def getDataSourceNames(self):
-        return self.dataSourceNames
+        return self.data_source_names

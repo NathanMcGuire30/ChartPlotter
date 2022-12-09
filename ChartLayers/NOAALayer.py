@@ -26,24 +26,24 @@ class ChartInfo(object):
 class NOAALayer(LayerCore):
     def __init__(self):
         super(NOAALayer, self).__init__()
-        rootDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        chartDir = os.path.join(rootDir, "Charts", "NOAA")
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        chart_dir = os.path.join(root_dir, "Charts", "NOAA")
 
         # Gets list of all the directories in Charts/NOAA
-        self.dataSourceNames = next(os.walk(chartDir))[1]
+        self.dataSourceNames = next(os.walk(chart_dir))[1]
 
         # Loop through and figure out bounds
         self.files = {}
         for file in self.dataSourceNames:
-            chartPath = os.path.join(chartDir, "{0}".format(file), "{0}.000".format(file))
-            self.files[file] = ChartInfo(name=file, chartData=ogr.Open(chartPath), coverage=[])
+            chart_path = os.path.join(chart_dir, "{0}".format(file), "{0}.000".format(file))
+            self.files[file] = ChartInfo(name=file, chartData=ogr.Open(chart_path), coverage=[])
             self.files[file].coverage = self.getDataRegion(file)
 
         # TODO: MASKS
 
-    def getNeededCharts(self, lowerLeft, upperRight):
+    def getNeededCharts(self, lower_left, upper_right):
         chartList = []
-        p1 = Polygon([(lowerLeft[1], lowerLeft[0]), (lowerLeft[1], upperRight[0]), (upperRight[1], upperRight[0]), (upperRight[1], lowerLeft[0])])
+        p1 = Polygon([(lower_left[1], lower_left[0]), (lower_left[1], upper_right[0]), (upper_right[1], upper_right[0]), (upper_right[1], lower_left[0])])
 
         for file in self.files:
             coverage = self.files[file].coverage
@@ -55,55 +55,55 @@ class NOAALayer(LayerCore):
 
         return chartList
 
-    def plotChart(self, lowerLeft, upperRight, width_px):
-        bounds = [lowerLeft[1], upperRight[1], lowerLeft[0], upperRight[0]]
-        rasterImage = createRasterImage(bounds, width_px)
-        chartList = self.getNeededCharts(lowerLeft, upperRight)  # Only rasterize the charts we need
+    def plotChart(self, lower_left, upper_right, width_px):
+        bounds = [lower_left[1], upper_right[1], lower_left[0], upper_right[0]]
+        raster_image = createRasterImage(bounds, width_px)
+        chart_list= self.getNeededCharts(lower_left, upper_right)  # Only rasterize the charts we need
 
-        for file in chartList:
+        for file in chart_list:
             chart = self.files[file].chartData
-            parseSingleChart(chart, rasterImage)
+            parseSingleChart(chart, raster_image)
 
-        imageChannels = rasterImage.ReadAsArray()
-        cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
-        rasterImage = None
+        image_channels = raster_image.ReadAsArray()
+        cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
+        raster_image = None
 
-        return cv2Image
+        return cv2_image
 
-    def plotWholeChart(self, chartNames, width_px):
-        chartsToUse = {}
-        for name in chartNames:
+    def plotWholeChart(self, chart_names, width_px):
+        charts_to_use= {}
+        for name in chart_names:
             if name in self.files:
-                chartsToUse[name] = self.files[name].chartData
+                charts_to_use[name] = self.files[name].chartData
             else:
                 return
 
-        bounds = getBoundsOverMultipleCharts(chartsToUse.values())
-        rasterImage = createRasterImage(bounds, width_px)
+        bounds = getBoundsOverMultipleCharts(charts_to_use.values())
+        raster_image = createRasterImage(bounds, width_px)
 
-        for file in chartsToUse:
-            parseSingleChart(chartsToUse[file], rasterImage)
+        for file in charts_to_use:
+            parseSingleChart(charts_to_use[file], raster_image)
 
-        imageChannels = rasterImage.ReadAsArray()
-        cv2Image = numpy.dstack((imageChannels[2], imageChannels[1], imageChannels[0]))
-        rasterImage = None
+        image_channels = raster_image.ReadAsArray()
+        cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
+        raster_image = None
 
-        return cv2Image
+        return cv2_image
 
     def getDataRegion(self, file):
-        dataSet = self.files[file].chartData
-        coverageLayerIndex = -1
-        coverageList = []
+        data_set = self.files[file].chartData
+        coverage_layer_index = -1
+        coverage_list = []
 
-        for coverageLayerIndex in range(dataSet.GetLayerCount()):
-            layer = dataSet.GetLayerByIndex(coverageLayerIndex)
+        for coverage_layer_index in range(data_set.GetLayerCount()):
+            layer = data_set.GetLayerByIndex(coverage_layer_index)
             if layer.GetDescription() == "M_COVR":
                 break
 
-        layer = dataSet.GetLayerByIndex(coverageLayerIndex)
-        Nfeat = layer.GetFeatureCount()
-        for j in range(Nfeat - 1):  # The last feature is the full rectangle bounding box
-            pointsList = []
+        layer = data_set.GetLayerByIndex(coverage_layer_index)
+        nfeat = layer.GetFeatureCount()
+        for j in range(nfeat - 1):  # The last feature is the full rectangle bounding box
+            points_list = []
 
             feat = layer.GetNextFeature()
             geom = feat.GetGeometryRef()
@@ -111,11 +111,11 @@ class NOAALayer(LayerCore):
             points = ring.GetPointCount()
             for p in range(points):
                 lon, lat, z = ring.GetPoint(p)
-                pointsList.append((lon, lat))
+                points_list.append((lon, lat))
 
-            coverageList.append(pointsList)
+            coverage_list.append(points_list)
 
-        return coverageList
+        return coverage_list
 
 
 def boxDimensions(bounds):
@@ -128,11 +128,11 @@ def boxDimensions(bounds):
     return [e, n]
 
 
-def getFileBounds(fileData):
+def getFileBounds(file_data):
     bounds = []
 
-    for i in range(fileData.GetLayerCount()):
-        layer = fileData.GetLayer(i)
+    for i in range(file_data.GetLayerCount()):
+        layer = file_data.GetLayer(i)
         x_min, x_max, y_min, y_max = layer.GetExtent()
         if abs(x_min - x_max) > 0.000001 and abs(y_min - y_max) > 0.000001:  # Some layers are very small, so we don't care about them
             if len(bounds) == 0:
@@ -146,16 +146,16 @@ def getFileBounds(fileData):
     return bounds
 
 
-def parseSingleChart(file, rasterImage):
+def parseSingleChart(file, raster_image):
     # Make a copy of the file so we can modify stuff
-    vectorSource = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
+    vector_source = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
 
-    sortedLayers = sortLayers(file)
+    sorted_layers = sortLayers(file)
 
-    for layerNumber in sortedLayers:
+    for layerNumber in sorted_layers:
         try:
-            layer = vectorSource.GetLayer(layerNumber)
-            rasterizeSingleLayer(layer, rasterImage)
+            layer = vector_source.GetLayer(layerNumber)
+            rasterizeSingleLayer(layer, raster_image)
         except Exception as e:
             print(e)
 
@@ -163,24 +163,24 @@ def parseSingleChart(file, rasterImage):
 def createRasterImage(bounds, width_px):
     # Figure out the pixel size and stuff for everything
     [x_min, x_max, y_min, y_max] = bounds  # These are lat and lon values (x is lon, y is lat)
-    [xLengthMeters, yLengthMeters] = boxDimensions(bounds)  # Convert to x and y size
-    pixelsPerMeter = float(width_px) / float(xLengthMeters)  # Figure out how tall the image should be based on how wide it is
-    height_px = int(yLengthMeters * pixelsPerMeter)
-    pixelSizeX = (x_max - x_min) / width_px  # Figure out pixel size in lat and lon
-    pixelSizeY = (y_max - y_min) / height_px
+    [x_length_meters, y_length_meters] = boxDimensions(bounds)  # Convert to x and y size
+    pixels_per_meter = float(width_px) / float(x_length_meters)  # Figure out how tall the image should be based on how wide it is
+    height_px = int(y_length_meters * pixels_per_meter)
+    pixel_size_x = (x_max - x_min) / width_px  # Figure out pixel size in lat and lon
+    pixel_size_y = (y_max - y_min) / height_px
 
     driver = gdal.GetDriverByName('MEM')
-    rasterImage = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
-    rasterImage.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, -pixelSizeY))
-    rasterImage.GetRasterBand(1).SetNoDataValue(1000)
+    raster_image = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
+    raster_image.SetGeoTransform((x_min, pixel_size_x, 0, y_max, 0, -pixel_size_y))
+    raster_image.GetRasterBand(1).SetNoDataValue(1000)
 
-    return rasterImage
+    return raster_image
 
 
-def getBoundsOverMultipleCharts(fileData):
+def getBoundsOverMultipleCharts(file_data):
     bounds = []
 
-    for file in fileData:
+    for file in file_data:
         [x_min, x_max, y_min, y_max] = getFileBounds(file)
 
         if len(bounds) == 0:
@@ -210,9 +210,9 @@ SHALLOW_WATER = [216, 240, 245]
 OBSTRUCTION = [100, 150, 150]
 
 
-def appendToList(outList, layerDictionary, key):
-    if key in layerDictionary:
-        outList.append(layerDictionary[key])
+def appendToList(out_list, layer_dictionary, key):
+    if key in layer_dictionary:
+        out_list.append(layer_dictionary[key])
 
 
 def sortLayers(file: ogr.DataSource):
@@ -221,104 +221,104 @@ def sortLayers(file: ogr.DataSource):
     # 41: Depth soundings
     # Coverage: M_COVR
 
-    layerDictionary = {}
+    layer_dictionary = {}
 
     for i in range(file.GetLayerCount()):
         layer = file.GetLayerByIndex(i)
         desc = layer.GetDescription()
-        layerDictionary[desc] = i
+        layer_dictionary[desc] = i
 
-    outList = []  # Put things into the right order
-    appendToList(outList, layerDictionary, "LNDARE")
-    appendToList(outList, layerDictionary, "LAKARE")
-    appendToList(outList, layerDictionary, "LNDRGN")
-    appendToList(outList, layerDictionary, "BUISGL")
-    appendToList(outList, layerDictionary, "RIVERS")
-    appendToList(outList, layerDictionary, "BRIDGE")
-    appendToList(outList, layerDictionary, "DEPARE")
-    appendToList(outList, layerDictionary, "DEPCNT")
-    appendToList(outList, layerDictionary, "OBSTRN")
-    appendToList(outList, layerDictionary, "FAIRWY")
-    appendToList(outList, layerDictionary, "DRGARE")
-    appendToList(outList, layerDictionary, "COALNE")
-    appendToList(outList, layerDictionary, "SLCONS")
-    appendToList(outList, layerDictionary, "UWTROC")
-    appendToList(outList, layerDictionary, "NAVLNE")
-    appendToList(outList, layerDictionary, "PIPSOL")
-    appendToList(outList, layerDictionary, "PONTON")
-    appendToList(outList, layerDictionary, "RECTRC")
-    appendToList(outList, layerDictionary, "SBDARE")
-    appendToList(outList, layerDictionary, "WRECKS")
+    out_list = []  # Put things into the right order
+    appendToList(out_list, layer_dictionary, "LNDARE")
+    appendToList(out_list, layer_dictionary, "LAKARE")
+    appendToList(out_list, layer_dictionary, "LNDRGN")
+    appendToList(out_list, layer_dictionary, "BUISGL")
+    appendToList(out_list, layer_dictionary, "RIVERS")
+    appendToList(out_list, layer_dictionary, "BRIDGE")
+    appendToList(out_list, layer_dictionary, "DEPARE")
+    appendToList(out_list, layer_dictionary, "DEPCNT")
+    appendToList(out_list, layer_dictionary, "OBSTRN")
+    appendToList(out_list, layer_dictionary, "FAIRWY")
+    appendToList(out_list, layer_dictionary, "DRGARE")
+    appendToList(out_list, layer_dictionary, "COALNE")
+    appendToList(out_list, layer_dictionary, "SLCONS")
+    appendToList(out_list, layer_dictionary, "UWTROC")
+    appendToList(out_list, layer_dictionary, "NAVLNE")
+    appendToList(out_list, layer_dictionary, "PIPSOL")
+    appendToList(out_list, layer_dictionary, "PONTON")
+    appendToList(out_list, layer_dictionary, "RECTRC")
+    appendToList(out_list, layer_dictionary, "SBDARE")
+    appendToList(out_list, layer_dictionary, "WRECKS")
 
-    return outList
+    return out_list
 
 
-def rasterizeSingleLayer(layer: ogr.Layer, rasterImage: gdal.Dataset):
+def rasterizeSingleLayer(layer: ogr.Layer, raster_image: gdal.Dataset):
     description = layer.GetDescription()
 
     if description == "LNDARE":
-        singleColor(layer, rasterImage, LAND_GREEN)
+        singleColor(layer, raster_image, LAND_GREEN)
     elif description == "LNDRGN":
-        singleColor(layer, rasterImage, MARSH_GREEN)
+        singleColor(layer, raster_image, MARSH_GREEN)
     elif description == "DEPCNT":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "DEPARE":
-        depthLayer(layer, rasterImage, SHALLOW_WATER)
+        depthLayer(layer, raster_image, SHALLOW_WATER)
     elif description == "FAIRWY":
-        singleColor(layer, rasterImage, WHITE)
+        singleColor(layer, raster_image, WHITE)
     elif description == "DRGARE":
-        singleColor(layer, rasterImage, WHITE)
+        singleColor(layer, raster_image, WHITE)
     elif description == "BUISGL":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "BRIDGE":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "COALNE":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "SLCONS":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "UWTROC":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "OBSTRN":
-        singleColor(layer, rasterImage, OBSTRUCTION)
+        singleColor(layer, raster_image, OBSTRUCTION)
     elif description == "LAKARE":
-        singleColor(layer, rasterImage, SHALLOW_WATER)
+        singleColor(layer, raster_image, SHALLOW_WATER)
     elif description == "PIPSOL":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "PONTON":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "RECTRC":
-        singleColor(layer, rasterImage, BLACK)
+        singleColor(layer, raster_image, BLACK)
     elif description == "RIVERS":
-        singleColor(layer, rasterImage, SHALLOW_WATER)
+        singleColor(layer, raster_image, SHALLOW_WATER)
     # elif description == "SBDARE":
     # singleColor(layer, rasterImage, MARSH_GREEN)
     elif description == "WRECKS":
-        singleColor(layer, rasterImage, SHALLOW_WATER)
+        singleColor(layer, raster_image, SHALLOW_WATER)
 
     # UNUSED
     # elif description == "NAVLNE":
     # singleColor(layer, rasterImage, BLACK)
 
 
-def singleColor(layer, rasterImage, color):
+def singleColor(layer, raster_image, color):
     source_srs = layer.GetSpatialRef()
     if source_srs:  # Make the target raster have the same projection as the source
-        rasterImage.SetProjection(source_srs.ExportToWkt())
+        raster_image.SetProjection(source_srs.ExportToWkt())
     else:  # Source has no projection (needs GDAL >= 1.7.0 to work)
-        rasterImage.SetProjection('LOCAL_CS["arbitrary"]')
+        raster_image.SetProjection('LOCAL_CS["arbitrary"]')
 
     # Rasterize
-    err = gdal.RasterizeLayer(rasterImage, (1, 2, 3), layer, burn_values=color)
+    err = gdal.RasterizeLayer(raster_image, (1, 2, 3), layer, burn_values=color)
     if err != 0:
         raise Exception("error rasterizing layer: %s" % err)
 
 
-def depthLayer(layer: ogr.Layer, rasterImage: gdal.Dataset, shallowColor):
+def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color):
     # TODO: Scale depth cutoff
 
     # Make temp place to store deep water areas, so we can rasterize them white
     source = ogr.GetDriverByName('MEMORY').CreateDataSource('memData')
-    deepLayer = source.CreateLayer("DEEP", layer.GetSpatialRef())
+    deep_layer = source.CreateLayer("DEEP", layer.GetSpatialRef())
 
     for i in range(layer.GetFeatureCount()):
         feature = layer.GetNextFeature()
@@ -327,11 +327,11 @@ def depthLayer(layer: ogr.Layer, rasterImage: gdal.Dataset, shallowColor):
         depth = (minDepth + maxDepth) / 2
 
         if depth > 3:
-            deepLayer.SetFeature(feature)
+            deep_layer.SetFeature(feature)
             layer.DeleteFeature(feature.GetFID())
 
     # Rasterize
-    err = gdal.RasterizeLayer(rasterImage, (1, 2, 3), layer, burn_values=shallowColor)
-    err1 = gdal.RasterizeLayer(rasterImage, (1, 2, 3), deepLayer, burn_values=WHITE)
+    err = gdal.RasterizeLayer(raster_image, (1, 2, 3), layer, burn_values=shallow_color)
+    err1 = gdal.RasterizeLayer(raster_image, (1, 2, 3), deep_layer, burn_values=WHITE)
     if err != 0 or err1 != 0:
         raise Exception("error rasterizing layer: %s" % err)

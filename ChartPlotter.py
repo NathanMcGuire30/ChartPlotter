@@ -19,17 +19,17 @@ class ChartPlotter(object):
 
         self.layers = ["NOAA"]
 
-    def plotChartPixels(self, lowerLeft, width, height, pixelsPerMeter):
+    def plotChartPixels(self, lower_left, width, height, pixels_per_meter):
         """Plots chart based on the lower left corner and image size"""
-        widthMeters = width / pixelsPerMeter
-        heightMeters = height / pixelsPerMeter
-        upperRight = navpy.ned2lla((heightMeters, widthMeters, 0), lowerLeft[0], lowerLeft[1], 0)
+        width_meters = width / pixels_per_meter
+        height_meters = height / pixels_per_meter
+        upper_right = navpy.ned2lla((height_meters, width_meters, 0), lower_left[0], lower_left[1], 0)
 
-        return self.plotChart(lowerLeft, [upperRight[0], upperRight[1]], width)
+        return self.plotChart(lower_left, [upper_right[0], upper_right[1]], width)
 
-    def plotChart(self, lowerLeft, upperRight, width_px):
+    def plotChart(self, lower_left, upper_right, width_px):
         for layer in self.layers:
-            image = self.layerObjects[layer].plotChart(lowerLeft, upperRight, width_px)
+            image = self.layerObjects[layer].plotChart(lower_left, upper_right, width_px)
 
         return image
 
