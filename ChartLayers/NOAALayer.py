@@ -33,16 +33,16 @@ class NOAALayer(LayerCore):
         self.dataSourceNames = next(os.walk(chart_dir))[1]
 
         # Colors are RGB
-        self.color_palate = {"BLACK": [0, 0, 0],
-                             "WHITE": [255, 255, 255],
-                             "DK_GREY": [50, 50, 50],
-                             "LAND_GREEN": [226, 235, 200],
-                             "MARSH_GREEN": [209, 193, 175],
-                             "SHALLOW_WATER": [216, 240, 245],
-                             "OBSTRUCTION": [100, 150, 150],
-                             }
+        self.color_palette = {"BLACK": [0, 0, 0],
+                              "WHITE": [255, 255, 255],
+                              "DK_GREY": [50, 50, 50],
+                              "LAND_GREEN": [226, 235, 200],
+                              "MARSH_GREEN": [209, 193, 175],
+                              "SHALLOW_WATER": [216, 240, 245],
+                              "OBSTRUCTION": [100, 150, 150],
+                              }
 
-        # Layer to palate mapping
+        # Layer to palette mapping
         self.layer_colors = {"LNDARE": "LAND_GREEN",
                              "LNDRGN": "MARSH_GREEN",
                              "DEPCNT": "BLACK",
@@ -74,8 +74,8 @@ class NOAALayer(LayerCore):
 
         # TODO: MASKS
 
-    def setColorPalate(self, new_palate):
-        self.color_palate.update(new_palate)
+    def setColorPalette(self, new_palette):
+        self.color_palette.update(new_palette)
 
     def setLayerColors(self, new_layer_colors):
         self.layer_colors.update(new_layer_colors)
@@ -173,11 +173,11 @@ class NOAALayer(LayerCore):
         description = layer.GetDescription()
 
         if description == "DEPARE":
-            depthLayer(layer, raster_image, self.color_palate["SHALLOW_WATER"], self.color_palate["WHITE"])
+            depthLayer(layer, raster_image, self.color_palette["SHALLOW_WATER"], self.color_palette["WHITE"])
         elif description in self.layer_colors:
             color_choice = self.layer_colors[description]
-            if color_choice in self.color_palate:
-                singleColor(layer, raster_image, self.color_palate[color_choice])
+            if color_choice in self.color_palette:
+                singleColor(layer, raster_image, self.color_palette[color_choice])
 
 
 def boxDimensions(bounds):
