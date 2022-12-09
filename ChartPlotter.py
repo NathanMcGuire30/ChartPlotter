@@ -36,5 +36,11 @@ class ChartPlotter(object):
     def getPossibleLayers(self):
         return self.layer_objects.keys()
 
+    def getLayer(self, name):
+        if name in self.layer_objects:
+            return self.layer_objects[name]
+        else:
+            return None
+
     def setLayers(self, layers):
         self.layers = layers

@@ -32,6 +32,39 @@ class NOAALayer(LayerCore):
         # Gets list of all the directories in Charts/NOAA
         self.dataSourceNames = next(os.walk(chart_dir))[1]
 
+        # Colors are RGB
+        self.color_palate = {"BLACK": [0, 0, 0],
+                             "WHITE": [255, 255, 255],
+                             "DK_GREY": [50, 50, 50],
+                             "LAND_GREEN": [226, 235, 200],
+                             "MARSH_GREEN": [209, 193, 175],
+                             "SHALLOW_WATER": [216, 240, 245],
+                             "OBSTRUCTION": [100, 150, 150],
+                             }
+
+        # Layer to palate mapping
+        self.layer_colors = {"LNDARE": "LAND_GREEN",
+                             "LNDRGN": "MARSH_GREEN",
+                             "DEPCNT": "BLACK",
+                             "DEPARE": "SHALLOW_WATER",
+                             "FAIRWY": "WHITE",
+                             "DRGARE": "WHITE",
+                             "BUISGL": "BLACK",
+                             "BRIDGE": "BLACK",
+                             "COALNE": "BLACK",
+                             "SLCONS": "BLACK",
+                             "UWTROC": "BLACK",
+                             "OBSTRN": "OBSTRUCTION",
+                             "LAKARE": "SHALLOW_WATER",
+                             "PIPSOL": "BLACK",
+                             "PONTON": "BLACK",
+                             "RECTRC": "BLACK",
+                             "RIVERS": "SHALLOW_WATER",
+                             "WRECKS": "SHALLOW_WATER",
+                             # "SBDARE": "MARSH_GREEN",
+                             # "NAVLNE": "BLACK",
+                             }
+
         # Loop through and figure out bounds
         self.files = {}
         for file in self.dataSourceNames:
@@ -40,6 +73,12 @@ class NOAALayer(LayerCore):
             self.files[file].coverage = self.getDataRegion(file)
 
         # TODO: MASKS
+
+    def setColorPalate(self, new_palate):
+        self.color_palate.update(new_palate)
+
+    def setLayerColors(self, new_layer_colors):
+        self.layer_colors.update(new_layer_colors)
 
     def getNeededCharts(self, lower_left, upper_right):
         chart_list = []
@@ -62,7 +101,7 @@ class NOAALayer(LayerCore):
 
         for file in chart_list:
             chart = self.files[file].chartData
-            parseSingleChart(chart, raster_image)
+            self.parseSingleChart(chart, raster_image)
 
         image_channels = raster_image.ReadAsArray()
         cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
@@ -82,7 +121,7 @@ class NOAALayer(LayerCore):
         raster_image = createRasterImage(bounds, width_px)
 
         for file in charts_to_use:
-            parseSingleChart(charts_to_use[file], raster_image)
+            self.parseSingleChart(charts_to_use[file], raster_image)
 
         image_channels = raster_image.ReadAsArray()
         cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
@@ -117,6 +156,29 @@ class NOAALayer(LayerCore):
 
         return coverage_list
 
+    def parseSingleChart(self, file, raster_image):
+        # Make a copy of the file so we can modify stuff
+        vector_source = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
+
+        sorted_layers = sortLayers(file)
+
+        for layerNumber in sorted_layers:
+            try:
+                layer = vector_source.GetLayer(layerNumber)
+                self.rasterizeSingleLayer(layer, raster_image)
+            except Exception as e:
+                print(e)
+
+    def rasterizeSingleLayer(self, layer: ogr.Layer, raster_image: gdal.Dataset):
+        description = layer.GetDescription()
+
+        if description == "DEPARE":
+            depthLayer(layer, raster_image, self.color_palate["SHALLOW_WATER"], self.color_palate["WHITE"])
+        elif description in self.layer_colors:
+            color_choice = self.layer_colors[description]
+            if color_choice in self.color_palate:
+                singleColor(layer, raster_image, self.color_palate[color_choice])
+
 
 def boxDimensions(bounds):
     [lon_min, lon_max, lat_min, lat_max] = bounds
@@ -144,20 +206,6 @@ def getFileBounds(file_data):
                 bounds[3] = max(bounds[3], y_max)
 
     return bounds
-
-
-def parseSingleChart(file, raster_image):
-    # Make a copy of the file so we can modify stuff
-    vector_source = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
-
-    sorted_layers = sortLayers(file)
-
-    for layerNumber in sorted_layers:
-        try:
-            layer = vector_source.GetLayer(layerNumber)
-            rasterizeSingleLayer(layer, raster_image)
-        except Exception as e:
-            print(e)
 
 
 def createRasterImage(bounds, width_px):
@@ -199,15 +247,6 @@ def getBoundsOverMultipleCharts(file_data):
 RASTERIZE_COLOR_FIELD = "__color__"
 MIN_DEPTH_KEY = "DRVAL1"
 MAX_DEPTH_KEY = "DRVAL2"
-
-# Colors are RGB
-BLACK = [0, 0, 0]
-WHITE = [255, 255, 255]
-DK_GREY = [50, 50, 50]
-LAND_GREEN = [226, 235, 200]
-MARSH_GREEN = [209, 193, 175]
-SHALLOW_WATER = [216, 240, 245]
-OBSTRUCTION = [100, 150, 150]
 
 
 def appendToList(out_list, layer_dictionary, key):
@@ -253,53 +292,6 @@ def sortLayers(file: ogr.DataSource):
     return out_list
 
 
-def rasterizeSingleLayer(layer: ogr.Layer, raster_image: gdal.Dataset):
-    description = layer.GetDescription()
-
-    if description == "LNDARE":
-        singleColor(layer, raster_image, LAND_GREEN)
-    elif description == "LNDRGN":
-        singleColor(layer, raster_image, MARSH_GREEN)
-    elif description == "DEPCNT":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "DEPARE":
-        depthLayer(layer, raster_image, SHALLOW_WATER)
-    elif description == "FAIRWY":
-        singleColor(layer, raster_image, WHITE)
-    elif description == "DRGARE":
-        singleColor(layer, raster_image, WHITE)
-    elif description == "BUISGL":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "BRIDGE":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "COALNE":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "SLCONS":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "UWTROC":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "OBSTRN":
-        singleColor(layer, raster_image, OBSTRUCTION)
-    elif description == "LAKARE":
-        singleColor(layer, raster_image, SHALLOW_WATER)
-    elif description == "PIPSOL":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "PONTON":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "RECTRC":
-        singleColor(layer, raster_image, BLACK)
-    elif description == "RIVERS":
-        singleColor(layer, raster_image, SHALLOW_WATER)
-    # elif description == "SBDARE":
-    # singleColor(layer, rasterImage, MARSH_GREEN)
-    elif description == "WRECKS":
-        singleColor(layer, raster_image, SHALLOW_WATER)
-
-    # UNUSED
-    # elif description == "NAVLNE":
-    # singleColor(layer, rasterImage, BLACK)
-
-
 def singleColor(layer, raster_image, color):
     source_srs = layer.GetSpatialRef()
     if source_srs:  # Make the target raster have the same projection as the source
@@ -313,7 +305,7 @@ def singleColor(layer, raster_image, color):
         raise Exception("error rasterizing layer: %s" % err)
 
 
-def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color):
+def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color, deep_color):
     # TODO: Scale depth cutoff
 
     # Make temp place to store deep water areas, so we can rasterize them white
@@ -332,6 +324,6 @@ def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color):
 
     # Rasterize
     err = gdal.RasterizeLayer(raster_image, (1, 2, 3), layer, burn_values=shallow_color)
-    err1 = gdal.RasterizeLayer(raster_image, (1, 2, 3), deep_layer, burn_values=WHITE)
+    err1 = gdal.RasterizeLayer(raster_image, (1, 2, 3), deep_layer, burn_values=deep_color)
     if err != 0 or err1 != 0:
         raise Exception("error rasterizing layer: %s" % err)
