@@ -58,7 +58,7 @@ class NOAALayer(LayerCore):
     def plotChart(self, lower_left, upper_right, width_px):
         bounds = [lower_left[1], upper_right[1], lower_left[0], upper_right[0]]
         raster_image = createRasterImage(bounds, width_px)
-        chart_list= self.getNeededCharts(lower_left, upper_right)  # Only rasterize the charts we need
+        chart_list = self.getNeededCharts(lower_left, upper_right)  # Only rasterize the charts we need
 
         for file in chart_list:
             chart = self.files[file].chartData
@@ -71,7 +71,7 @@ class NOAALayer(LayerCore):
         return cv2_image
 
     def plotWholeChart(self, chart_names, width_px):
-        charts_to_use= {}
+        charts_to_use = {}
         for name in chart_names:
             if name in self.files:
                 charts_to_use[name] = self.files[name].chartData
@@ -102,7 +102,7 @@ class NOAALayer(LayerCore):
 
         layer = data_set.GetLayerByIndex(coverage_layer_index)
         nfeat = layer.GetFeatureCount()
-        for j in range(nfeat - 1):  # The last feature is the full rectangle bounding box
+        for j in range(nfeat):  # The last feature is the full rectangle bounding box
             points_list = []
 
             feat = layer.GetNextFeature()

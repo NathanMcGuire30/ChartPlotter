@@ -13,7 +13,7 @@ from ChartLayers.NOAALayer import NOAALayer
 
 class ChartPlotter(object):
     def __init__(self):
-        self.layerObjects = {
+        self.layer_objects = {
             "NOAA": NOAALayer()
         }
 
@@ -29,12 +29,12 @@ class ChartPlotter(object):
 
     def plotChart(self, lower_left, upper_right, width_px):
         for layer in self.layers:
-            image = self.layerObjects[layer].plotChart(lower_left, upper_right, width_px)
+            image = self.layer_objects[layer].plotChart(lower_left, upper_right, width_px)
 
         return image
 
     def getPossibleLayers(self):
-        return self.layerObjects.keys()
+        return self.layer_objects.keys()
 
     def setLayers(self, layers):
         self.layers = layers
