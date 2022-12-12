@@ -8,7 +8,7 @@ import cv2
 import numpy
 import numpy as np
 
-from ChartPlotter import ChartPlotter
+from chart_plotter import ChartPlotter
 
 if __name__ == '__main__':
     chartPlotter = ChartPlotter()

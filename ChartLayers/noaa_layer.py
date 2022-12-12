@@ -12,7 +12,7 @@ from shapely.geometry import Polygon
 from dataclasses import dataclass
 from osgeo import gdal, ogr, osr
 
-from ChartLayers.LayerCore import LayerCore
+from ChartLayers.layer_core import LayerCore
 from Utility.conversions import getImageHeightFromWidth
 
 

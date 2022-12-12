@@ -8,7 +8,7 @@ A configurable system for drawing charts
 
 import navpy
 
-from ChartLayers.NOAALayer import NOAALayer
+from ChartLayers.noaa_layer import NOAALayer
 from Utility.conversions import getImageHeightFromWidth
 
 
