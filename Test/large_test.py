@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
             lowerLeft = (latitudes[i + 1], longitudes[j])
             upperRight = (latitudes[i], longitudes[j + 1])
-            im = chartPlotter.plotChart(lowerLeft, upperRight, boxWidth)
+            im = chartPlotter.plotChartByWidth(lowerLeft, upperRight, boxWidth)
 
             [imHeight, imWidth, _] = im.shape
 
