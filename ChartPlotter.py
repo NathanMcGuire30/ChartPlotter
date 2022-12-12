@@ -9,6 +9,7 @@ A configurable system for drawing charts
 import navpy
 
 from ChartLayers.NOAALayer import NOAALayer
+from Utility.conversions import getImageHeightFromWidth
 
 
 class ChartPlotter(object):
@@ -20,16 +21,23 @@ class ChartPlotter(object):
         self.layers = ["NOAA"]
 
     def plotChartPixels(self, lower_left, width, height, pixels_per_meter):
-        """Plots chart based on the lower left corner and image size"""
+        """
+        Plots chart based on the lower left corner and image size
+        """
+
         width_meters = width / pixels_per_meter
         height_meters = height / pixels_per_meter
         upper_right = navpy.ned2lla((height_meters, width_meters, 0), lower_left[0], lower_left[1], 0)
 
-        return self.plotChart(lower_left, [upper_right[0], upper_right[1]], width)
+        return self.plotChartByWidth(lower_left, [upper_right[0], upper_right[1]], width)
 
-    def plotChart(self, lower_left, upper_right, width_px):
+    def plotChartByWidth(self, lower_left, upper_right, width_px):
+        height_px = getImageHeightFromWidth([lower_left[1], upper_right[1], lower_left[0], upper_right[0]], width_px)
+        return self.plotChart(lower_left, upper_right, width_px, height_px)
+
+    def plotChart(self, lower_left, upper_right, width_px, height_px):
         for layer in self.layers:
-            image = self.layer_objects[layer].plotChart(lower_left, upper_right, width_px)
+            image = self.layer_objects[layer].plotChart(lower_left, upper_right, width_px, height_px)
 
         return image
 

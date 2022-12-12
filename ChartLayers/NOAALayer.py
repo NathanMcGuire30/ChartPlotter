@@ -10,10 +10,10 @@ import navpy
 
 from shapely.geometry import Polygon
 from dataclasses import dataclass
-from osgeo import gdal
-from osgeo import ogr
+from osgeo import gdal, ogr, osr
 
 from ChartLayers.LayerCore import LayerCore
+from Utility.conversions import getImageHeightFromWidth
 
 
 @dataclass
@@ -94,14 +94,28 @@ class NOAALayer(LayerCore):
 
         return chart_list
 
-    def plotChart(self, lower_left, upper_right, width_px):
+    def plotChart(self, lower_left, upper_right, width_px, height_px):
         bounds = [lower_left[1], upper_right[1], lower_left[0], upper_right[0]]
-        raster_image = createRasterImage(bounds, width_px)
+        raster_image = createRasterImage(bounds, width_px, height_px)
         chart_list = self.getNeededCharts(lower_left, upper_right)  # Only rasterize the charts we need
 
         for file in chart_list:
             chart = self.files[file].chartData
             self.parseSingleChart(chart, raster_image)
+
+        # print(raster_image.GetSpatialRef().ExportToWkt())
+
+        # driver = gdal.GetDriverByName('MEM')
+        # output_raster = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(3395)
+        # output_raster.SetProjection(srs.ExportToWkt())
+
+        # gdal.Warp("test.tif", raster_image)
+
+        # 3395
+        # 3857
 
         image_channels = raster_image.ReadAsArray()
         cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
@@ -118,7 +132,7 @@ class NOAALayer(LayerCore):
                 return
 
         bounds = getBoundsOverMultipleCharts(charts_to_use.values())
-        raster_image = createRasterImage(bounds, width_px)
+        raster_image = createRasterImageByWidth(bounds, width_px)
 
         for file in charts_to_use:
             self.parseSingleChart(charts_to_use[file], raster_image)
@@ -180,16 +194,6 @@ class NOAALayer(LayerCore):
                 singleColor(layer, raster_image, self.color_palette[color_choice])
 
 
-def boxDimensions(bounds):
-    [lon_min, lon_max, lat_min, lat_max] = bounds
-
-    ned = navpy.lla2ned(lat_max, lon_max, 0, lat_min, lon_min, 0)
-    n = ned[0]
-    e = ned[1]
-
-    return [e, n]
-
-
 def getFileBounds(file_data):
     bounds = []
 
@@ -208,18 +212,19 @@ def getFileBounds(file_data):
     return bounds
 
 
-def createRasterImage(bounds, width_px):
-    # Figure out the pixel size and stuff for everything
-    [x_min, x_max, y_min, y_max] = bounds  # These are lat and lon values (x is lon, y is lat)
-    [x_length_meters, y_length_meters] = boxDimensions(bounds)  # Convert to x and y size
-    pixels_per_meter = float(width_px) / float(x_length_meters)  # Figure out how tall the image should be based on how wide it is
-    height_px = int(y_length_meters * pixels_per_meter)
-    pixel_size_x = (x_max - x_min) / width_px  # Figure out pixel size in lat and lon
-    pixel_size_y = (y_max - y_min) / height_px
+def createRasterImageByWidth(bounds, width_px):
+    height_px = getImageHeightFromWidth(bounds, width_px)
+    return createRasterImage(bounds, width_px, height_px)
+
+
+def createRasterImage(bounds, width_px, height_px):
+    [longitude_min, longitude_max, latitude_min, latitude_max] = bounds
+    pixel_size_x = (longitude_max - longitude_min) / width_px  # Figure out pixel size in lat and lon
+    pixel_size_y = (latitude_max - latitude_min) / height_px
 
     driver = gdal.GetDriverByName('MEM')
     raster_image = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
-    raster_image.SetGeoTransform((x_min, pixel_size_x, 0, y_max, 0, -pixel_size_y))
+    raster_image.SetGeoTransform((longitude_min, pixel_size_x, 0, latitude_max, 0, -pixel_size_y))
     raster_image.GetRasterBand(1).SetNoDataValue(1000)
 
     return raster_image
