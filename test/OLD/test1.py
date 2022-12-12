@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Test script that prints out all the features from a NOAA chart
+test script that prints out all the features from a NOAA chart
 """
 
 from osgeo import ogr

@@ -1,6 +1,6 @@
 import cv2
 
-from ChartLayers.noaa_layer import NOAALayer
+from chart_layers.noaa_layer import NOAALayer
 
 
 def plotAndShowChart(noaa_layer_object, chart_names, width_px):

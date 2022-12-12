@@ -1,6 +1,6 @@
 Charts*
-Test/OLD/Output/*
+test/OLD/Output/*
 .idea
 example.png
 TestOutputs/*
-Test/Output.png
+test/Output.png

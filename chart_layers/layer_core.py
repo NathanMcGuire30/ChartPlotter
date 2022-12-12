@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Test code for ChartPlotter
+test code for ChartPlotter
 """
 
 
