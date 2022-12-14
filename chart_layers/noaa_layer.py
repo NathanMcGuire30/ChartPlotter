@@ -30,9 +30,9 @@ class NOAALayer(LayerCore):
     def __init__(self):
         super(NOAALayer, self).__init__()
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        chart_dir = os.path.join(root_dir, "Charts", "NOAA")
+        chart_dir = os.path.join(root_dir, "charts", "noaa")
 
-        # Gets list of all the directories in Charts/NOAA
+        # Gets list of all the directories in charts/noaa
         self.dataSourceNames = next(os.walk(chart_dir))[1]
 
         # Colors are RGB
@@ -99,7 +99,7 @@ class NOAALayer(LayerCore):
     def setShallowWaterDepth(self, new_depth):
         self.shallow_water_depth = new_depth
 
-    def enableTifReproject(self, file_name: str, tif_projection: str):
+    def enableTifReproject(self, tif_projection: str, file_name: str = "test.tif"):
         self.tif_reproject = True
         self.tif_name = file_name
         self.tif_projection = tif_projection

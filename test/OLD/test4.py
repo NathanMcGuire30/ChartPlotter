@@ -16,7 +16,7 @@ RASTERIZE_COLOR_FIELD = "__color__"
 
 def openFile(chartName) -> ogr.DataSource:
     rootDir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    chartDir = os.path.join(rootDir, "Charts", "NOAA")
+    chartDir = os.path.join(rootDir, "charts", "noaa")
     chartPath = os.path.join(chartDir, "{0}".format(chartName), "{0}.000".format(chartName))
     return ogr.Open(chartPath)
 

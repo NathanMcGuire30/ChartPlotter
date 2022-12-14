@@ -8,7 +8,7 @@ from osgeo import ogr
 
 
 def openFile(chartName) -> ogr.DataSource:
-    return ogr.Open("Charts/{0}/{0}.000".format(chartName))
+    return ogr.Open("charts/{0}/{0}.000".format(chartName))
 
 
 def parseFeature(feat: ogr.Feature):

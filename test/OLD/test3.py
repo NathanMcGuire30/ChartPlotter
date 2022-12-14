@@ -20,7 +20,7 @@ class MapDraw():
 
 
 def openFile() -> ogr.DataSource:
-    return ogr.Open("../Charts/a/ENC_ROOT/a/a.000")
+    return ogr.Open("../charts/a/ENC_ROOT/a/a.000")
 
 
 def parseFeature(feat: ogr.Feature):
