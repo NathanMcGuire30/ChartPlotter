@@ -5,9 +5,12 @@ Uses osgeo rasterize function to turn NOAA vector charts into png images
 """
 
 import os
-import numpy
-import navpy
+from typing import List
 
+import numpy
+from collections import OrderedDict
+
+import osgeo.gdal
 from shapely.geometry import Polygon
 from dataclasses import dataclass
 from osgeo import gdal, ogr, osr
@@ -42,28 +45,36 @@ class NOAALayer(LayerCore):
                               "OBSTRUCTION": [100, 150, 150],
                               }
 
-        # Layer to palette mapping
-        self.layer_colors = {"LNDARE": "LAND_GREEN",
-                             "LNDRGN": "MARSH_GREEN",
-                             "DEPCNT": "BLACK",
-                             "DEPARE": "SHALLOW_WATER",
-                             "FAIRWY": "WHITE",
-                             "DRGARE": "WHITE",
-                             "BUISGL": "BLACK",
-                             "BRIDGE": "BLACK",
-                             "COALNE": "BLACK",
-                             "SLCONS": "BLACK",
-                             "UWTROC": "BLACK",
-                             "OBSTRN": "OBSTRUCTION",
-                             "LAKARE": "SHALLOW_WATER",
-                             "PIPSOL": "BLACK",
-                             "PONTON": "BLACK",
-                             "RECTRC": "BLACK",
-                             "RIVERS": "SHALLOW_WATER",
-                             "WRECKS": "SHALLOW_WATER",
-                             # "SBDARE": "MARSH_GREEN",
-                             # "NAVLNE": "BLACK",
-                             }
+        # Layer to palette mapping and layer order
+        self.layer_colors = OrderedDict({"LNDARE": "LAND_GREEN",
+                                         "LAKARE": "SHALLOW_WATER",
+                                         "LNDRGN": "MARSH_GREEN",
+                                         "BUISGL": "BLACK",
+                                         "RIVERS": "SHALLOW_WATER",
+                                         "BRIDGE": "BLACK",
+                                         "DEPARE": "SHALLOW_WATER",
+                                         "DEPCNT": "BLACK",
+                                         "OBSTRN": "OBSTRUCTION",
+                                         "FAIRWY": "WHITE",
+                                         "DRGARE": "WHITE",
+                                         "COALNE": "BLACK",
+                                         "SLCONS": "BLACK",
+                                         "UWTROC": "BLACK",
+                                         "NAVLNE": None,
+                                         "PIPSOL": "BLACK",
+                                         "PONTON": "BLACK",
+                                         "RECTRC": "BLACK",
+                                         "SBDARE": None,  # Marshy areas or something
+                                         "WRECKS": "SHALLOW_WATER",
+                                         "BOYLAT": None,  # Buoys
+                                         })
+
+        self.shallow_water_depth = 5  # Depth in meters for water to be considered "shallow"
+
+        self.tif_reproject = False
+        self.tif_name = ""
+        self.tif_projection = ""
+        self.tif_bounds = [None, None]
 
         # Loop through and figure out bounds
         self.files = {}
@@ -79,6 +90,19 @@ class NOAALayer(LayerCore):
 
     def setLayerColors(self, new_layer_colors):
         self.layer_colors.update(new_layer_colors)
+
+    def removeLayers(self, layers_to_remove: List[str]):
+        for layer in layers_to_remove:
+            if layer in self.layer_colors:
+                del self.layer_colors[layer]
+
+    def setShallowWaterDepth(self, new_depth):
+        self.shallow_water_depth = new_depth
+
+    def enableTifReproject(self, file_name: str, tif_projection: str):
+        self.tif_reproject = True
+        self.tif_name = file_name
+        self.tif_projection = tif_projection
 
     def getNeededCharts(self, lower_left, upper_right):
         chart_list = []
@@ -99,25 +123,37 @@ class NOAALayer(LayerCore):
         raster_image = createRasterImage(bounds, width_px, height_px)
         chart_list = self.getNeededCharts(lower_left, upper_right)  # Only rasterize the charts we need
 
+        # Set raster image to have the same projection as the origional chart
+
+        chart_coordinate_system = self.files[chart_list[0]].chartData.GetLayer(1).GetSpatialRef()
+        raster_image.SetProjection(chart_coordinate_system.ExportToWkt())
+
+        # Go through each chart and its data to the raster image
         for file in chart_list:
             chart = self.files[file].chartData
             self.parseSingleChart(chart, raster_image)
 
-        # print(raster_image.GetSpatialRef().ExportToWkt())
+        if self.tif_reproject:
+            # This is a hack, but it seems to work
+            # The only way I could get anything to re-project was to save it out as another file type
+            a = gdal.Warp(self.tif_name, raster_image, dstSRS=self.tif_projection)
+            a = None  # Apparently you have to do this to properly free memory
 
-        # driver = gdal.GetDriverByName('MEM')
-        # output_raster = driver.Create("", width_px, height_px, 3, gdal.GDT_Byte)
+            # https://gis.stackexchange.com/questions/104362/how-to-get-extent-out-of-geotiff
+            test = gdal.Open(self.tif_name)
+            geo_transform = test.GetGeoTransform()
+            min_x = geo_transform[0]
+            max_y = geo_transform[3]
+            max_x = min_x + geo_transform[1] * test.RasterXSize
+            min_y = max_y + geo_transform[5] * test.RasterYSize
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(3395)
-        # output_raster.SetProjection(srs.ExportToWkt())
+            lower_left = [min_x, min_y]
+            upper_right = [max_x, max_y]
+            self.tif_bounds = [lower_left, upper_right]
+            image_channels = test.ReadAsArray()
+        else:
+            image_channels = raster_image.ReadAsArray()
 
-        # gdal.Warp("test.tif", raster_image)
-
-        # 3395
-        # 3857
-
-        image_channels = raster_image.ReadAsArray()
         cv2_image = numpy.dstack((image_channels[2], image_channels[1], image_channels[0]))
         raster_image = None
 
@@ -174,7 +210,7 @@ class NOAALayer(LayerCore):
         # Make a copy of the file so we can modify stuff
         vector_source = ogr.GetDriverByName("Memory").CopyDataSource(file, "")
 
-        sorted_layers = sortLayers(file)
+        sorted_layers = self.getSortedLayerNames(file)
 
         for layerNumber in sorted_layers:
             try:
@@ -187,11 +223,28 @@ class NOAALayer(LayerCore):
         description = layer.GetDescription()
 
         if description == "DEPARE":
-            depthLayer(layer, raster_image, self.color_palette["SHALLOW_WATER"], self.color_palette["WHITE"])
+            depthLayer(layer, raster_image, self.color_palette["SHALLOW_WATER"], self.color_palette["WHITE"], self.shallow_water_depth)
         elif description in self.layer_colors:
             color_choice = self.layer_colors[description]
             if color_choice in self.color_palette:
                 singleColor(layer, raster_image, self.color_palette[color_choice])
+
+    def getSortedLayerNames(self, file: ogr.DataSource):
+        # Coverage: M_COVR
+
+        layer_dictionary = {}
+        out_list = []
+
+        for i in range(file.GetLayerCount()):
+            layer = file.GetLayerByIndex(i)
+            desc = layer.GetDescription()
+            layer_dictionary[desc] = i
+
+        for key in self.layer_colors.keys():
+            if key in layer_dictionary:
+                out_list.append(layer_dictionary[key])
+
+        return out_list
 
 
 def getFileBounds(file_data):
@@ -217,7 +270,7 @@ def createRasterImageByWidth(bounds, width_px):
     return createRasterImage(bounds, width_px, height_px)
 
 
-def createRasterImage(bounds, width_px, height_px):
+def createRasterImage(bounds, width_px, height_px) -> osgeo.gdal.Dataset:
     [longitude_min, longitude_max, latitude_min, latitude_max] = bounds
     pixel_size_x = (longitude_max - longitude_min) / width_px  # Figure out pixel size in lat and lon
     pixel_size_y = (latitude_max - latitude_min) / height_px
@@ -254,63 +307,14 @@ MIN_DEPTH_KEY = "DRVAL1"
 MAX_DEPTH_KEY = "DRVAL2"
 
 
-def appendToList(out_list, layer_dictionary, key):
-    if key in layer_dictionary:
-        out_list.append(layer_dictionary[key])
-
-
-def sortLayers(file: ogr.DataSource):
-    # 7: Buoys
-    # 13: Towers on rocks in woods hole
-    # 41: Depth soundings
-    # Coverage: M_COVR
-
-    layer_dictionary = {}
-
-    for i in range(file.GetLayerCount()):
-        layer = file.GetLayerByIndex(i)
-        desc = layer.GetDescription()
-        layer_dictionary[desc] = i
-
-    out_list = []  # Put things into the right order
-    appendToList(out_list, layer_dictionary, "LNDARE")
-    appendToList(out_list, layer_dictionary, "LAKARE")
-    appendToList(out_list, layer_dictionary, "LNDRGN")
-    appendToList(out_list, layer_dictionary, "BUISGL")
-    appendToList(out_list, layer_dictionary, "RIVERS")
-    appendToList(out_list, layer_dictionary, "BRIDGE")
-    appendToList(out_list, layer_dictionary, "DEPARE")
-    appendToList(out_list, layer_dictionary, "DEPCNT")
-    appendToList(out_list, layer_dictionary, "OBSTRN")
-    appendToList(out_list, layer_dictionary, "FAIRWY")
-    appendToList(out_list, layer_dictionary, "DRGARE")
-    appendToList(out_list, layer_dictionary, "COALNE")
-    appendToList(out_list, layer_dictionary, "SLCONS")
-    appendToList(out_list, layer_dictionary, "UWTROC")
-    appendToList(out_list, layer_dictionary, "NAVLNE")
-    appendToList(out_list, layer_dictionary, "PIPSOL")
-    appendToList(out_list, layer_dictionary, "PONTON")
-    appendToList(out_list, layer_dictionary, "RECTRC")
-    appendToList(out_list, layer_dictionary, "SBDARE")
-    appendToList(out_list, layer_dictionary, "WRECKS")
-
-    return out_list
-
-
 def singleColor(layer, raster_image, color):
-    source_srs = layer.GetSpatialRef()
-    if source_srs:  # Make the target raster have the same projection as the source
-        raster_image.SetProjection(source_srs.ExportToWkt())
-    else:  # Source has no projection (needs GDAL >= 1.7.0 to work)
-        raster_image.SetProjection('LOCAL_CS["arbitrary"]')
-
     # Rasterize
     err = gdal.RasterizeLayer(raster_image, (1, 2, 3), layer, burn_values=color)
     if err != 0:
         raise Exception("error rasterizing layer: %s" % err)
 
 
-def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color, deep_color):
+def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color, deep_color, depth_cutoff):
     # TODO: Scale depth cutoff
 
     # Make temp place to store deep water areas, so we can rasterize them white
@@ -319,11 +323,9 @@ def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color, deep
 
     for i in range(layer.GetFeatureCount()):
         feature = layer.GetNextFeature()
-        min_depth = float(feature.GetField(MIN_DEPTH_KEY))
-        max_depth = float(feature.GetField(MAX_DEPTH_KEY))
-        depth = (min_depth + max_depth) / 2
+        min_depth = float(feature.GetField(MIN_DEPTH_KEY))  # Depths are in METERS!
 
-        if depth > 3:
+        if min_depth > depth_cutoff:
             deep_layer.SetFeature(feature)
             layer.DeleteFeature(feature.GetFID())
 

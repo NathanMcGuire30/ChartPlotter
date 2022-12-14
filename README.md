@@ -53,6 +53,7 @@ The meanings I've figured out:
 - 21: Land
 - 23: Marsh
 - 29: Shallow, near shore stuff
+- 33: Channels
 - 34: Water
 - 36: Shallow stuff v2
 - 39: Rocky edges?
