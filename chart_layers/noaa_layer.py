@@ -43,6 +43,9 @@ class NOAALayer(LayerCore):
                               "MARSH_GREEN": [209, 193, 175],
                               "SHALLOW_WATER": [216, 240, 245],
                               "OBSTRUCTION": [100, 150, 150],
+                              "RED": [255, 0, 0],
+                              "GREEN": [0, 255, 0],
+                              "BLUE": [0, 0, 255]
                               }
 
         # Layer to palette mapping and layer order
@@ -66,6 +69,7 @@ class NOAALayer(LayerCore):
                                          "RECTRC": "BLACK",
                                          "SBDARE": None,  # Marshy areas or something
                                          "WRECKS": "SHALLOW_WATER",
+                                         "DAYMAR": None,
                                          "BOYLAT": None,  # Buoys
                                          })
 
