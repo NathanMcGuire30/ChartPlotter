@@ -24,7 +24,7 @@ Also requires NavPY and shapley
 ## Charts:
 
 I use the NOAA vector charts, because they are dropping support for all else. I download the zip from their website, and put the folder in ENC_ROOT into a folder called
-`ChartPlotter/Charts/NOAA`.
+`ChartPlotter/charts/noaa`.
 
 ## Description
 
