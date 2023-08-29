@@ -19,7 +19,7 @@ pip3 install GDAL
 
 `sudo apt install python3-gdal` also seems to work
 
-Also requires NavPY and shapley
+Also requires NavPY and shapely
 
 ## Charts:
 
