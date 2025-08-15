@@ -1,0 +1,37 @@
+[project]
+name = "chart_plotter"
+dynamic = ["version"]
+description = "chart_plotter"
+readme = "README.txt"
+keywords = ["Library", "Python Modules", "Scientific/Engineering"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.6",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)"
+]
+requires-python = ">=3.6"
+dependencies = []
+
+[[project.authors]]
+name = "Nathan McGuire"
+email = "nathan.e.mcguire@gmail.com"
+
+[project.urls]
+homepage = "https://github.com/NathanMcGuire30/ChartPlotter"
+
+[project.scripts]
+# No scripts for now; we may add scripts in /bin in a future release
+
+[project.optional-dependencies]
+# No optional dependencies
+
+[build-system]
+requires = ["setuptools>=64", "wheel", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/chart_plotter/_version.py"

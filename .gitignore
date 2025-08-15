@@ -5,3 +5,7 @@ example.png
 TestOutputs/*
 test/Output.png
 test/test.tif
+
+*_version.py
+build
+*/chart_plotter.egg-info

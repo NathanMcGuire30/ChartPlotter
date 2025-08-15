@@ -1,6 +1,6 @@
 import cv2
 
-from chart_layers.noaa_layer import NOAALayer
+from chart_plotter.chart_layers.noaa_layer import NOAALayer
 
 
 def plotAndShowChart(noaa_layer_object, chart_names, width_px):
@@ -14,11 +14,10 @@ def plotAndShowChart(noaa_layer_object, chart_names, width_px):
 
 
 if __name__ == '__main__':
-    all_charts = ["US5MA1EJ", "US5MA1EK"]
-
     NOAALayer = NOAALayer()
+    all_charts = NOAALayer.getDataSourceNames()
     # plotAndShowChart(NOAALayer, ["US5MA1EJ"], 1000)
-    plotAndShowChart(NOAALayer, all_charts, 2000)
+    # plotAndShowChart(NOAALayer, all_charts, 2000)
     # plotAndShowChart(NOAALayer, ["US5MA20M", "US5MA21M", "US5MA25M", "US5MA26M", "US5MA27M", "US5MA28M", "US5MA29M", "US5MA33M"], 1000)
 
     for chart in NOAALayer.getDataSourceNames():

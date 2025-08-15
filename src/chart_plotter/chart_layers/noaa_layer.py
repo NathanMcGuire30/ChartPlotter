@@ -15,8 +15,8 @@ from shapely.geometry import Polygon
 from dataclasses import dataclass
 from osgeo import gdal, ogr, osr
 
-from chart_layers.layer_core import LayerCore
-from utility.conversions import getImageHeightFromWidth
+from .layer_core import LayerCore
+from chart_plotter.utility.conversions import getImageHeightFromWidth
 
 
 @dataclass
@@ -27,13 +27,26 @@ class ChartInfo(object):
 
 
 class NOAALayer(LayerCore):
-    def __init__(self):
+    def __init__(self, chart_dir=None):
         super(NOAALayer, self).__init__()
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        chart_dir = os.path.join(root_dir, "charts", "noaa")
+
+        if chart_dir is None:
+            root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            chart_dir = os.path.join(root_dir, "..", "..", "charts", "noaa")
+        chart_dir = os.path.abspath(chart_dir)
+
+        # print(chart_dir)
 
         # Gets list of all the directories in charts/noaa
-        self.dataSourceNames = next(os.walk(chart_dir))[1]
+        files_to_load = []
+        for root, dirs, files in os.walk(chart_dir):
+            dir_name = root.split("/")[-1]
+            for file in files:
+                if ".000" in file and file[0:-4] == dir_name:
+                    files_to_load.append(root)
+
+        # print(f"Found {len(self.dataSourceNames)} charts")
+        # print(self.dataSourceNames)
 
         # Colors are RGB
         self.color_palette = {"BLACK": [0, 0, 0],
@@ -82,10 +95,12 @@ class NOAALayer(LayerCore):
 
         # Loop through and figure out bounds
         self.files = {}
-        for file in self.dataSourceNames:
-            chart_path = os.path.join(chart_dir, "{0}".format(file), "{0}.000".format(file))
-            self.files[file] = ChartInfo(name=file, chartData=ogr.Open(chart_path), coverage=[])
-            self.files[file].coverage = self.getDataRegion(file)
+        for chart_directory in files_to_load:
+            chart_name = chart_directory.split("/")[-1]
+            chart_path = os.path.join(chart_directory, "{0}.000".format(chart_name))
+            self.files[chart_name] = ChartInfo(name=chart_name, chartData=ogr.Open(chart_path), coverage=[])
+            self.files[chart_name].coverage = self.getDataRegion(chart_name)
+            self.dataSourceNames.append(chart_name)
 
         # TODO: MASKS
 

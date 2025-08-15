@@ -8,14 +8,14 @@ A configurable system for drawing charts
 
 import navpy
 
-from chart_layers.noaa_layer import NOAALayer
-from utility.conversions import getImageHeightFromWidth
+from .chart_layers.noaa_layer import NOAALayer
+from .utility.conversions import getImageHeightFromWidth
 
 
 class ChartPlotter(object):
-    def __init__(self):
+    def __init__(self, noaa_chart_directory=None):
         self.layer_objects = {
-            "NOAA": NOAALayer()
+            "NOAA": NOAALayer(chart_dir=noaa_chart_directory)
         }
 
         self.layers = ["NOAA"]

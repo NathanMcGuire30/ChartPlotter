@@ -6,7 +6,7 @@ test code for ChartPlotter
 
 import cv2
 
-from chart_plotter import ChartPlotter
+from chart_plotter.chart_plotter import ChartPlotter
 
 if __name__ == '__main__':
     chart_plotter = ChartPlotter()
