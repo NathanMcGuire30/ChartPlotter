@@ -198,6 +198,45 @@ class NOAALayer(LayerCore):
 
         return cv2_image
 
+    def getShapesFromLayers(self, lower_left, upper_right, layers):
+        data = self.getFeaturesForChartsInBounds(lower_left, upper_right, layer_types=layers)
+        output = {}
+
+        for layer in data:
+            for feature in data[layer]:
+                if layer not in output:
+                    output[layer] = []
+
+                output[layer].append(getFeatureInfo(feature))
+
+        return output
+
+    def getFeaturesForChartsInBounds(self, lower_left, upper_right, layer_types=None):
+        if layer_types is not None and isinstance(layer_types, str):
+            layer_types = [layer_types]
+
+        chart_list = self.getNeededCharts(lower_left, upper_right)
+        output_data = {}
+
+        for file in chart_list:
+            chart = self.files[file].chartData
+
+            for i in range(chart.GetLayerCount()):
+                layer = chart.GetLayerByIndex(i)
+                layer_name = layer.GetDescription()
+
+                if layer_types is not None and layer_name not in layer_types:
+                    continue
+
+                features = getAllFeaturesForLayer(layer)
+
+                if layer_name not in output_data:
+                    output_data[layer_name] = []
+
+                output_data[layer_name] += features
+
+        return output_data
+
     def getDataRegion(self, file):
         data_set = self.files[file].chartData
         coverage_layer_index = -1
@@ -353,3 +392,22 @@ def depthLayer(layer: ogr.Layer, raster_image: gdal.Dataset, shallow_color, deep
     err1 = gdal.RasterizeLayer(raster_image, (1, 2, 3), deep_layer, burn_values=deep_color)
     if err != 0 or err1 != 0:
         raise Exception("error rasterizing layer: %s" % err)
+
+
+def getAllFeaturesForLayer(layer: ogr.Layer):
+    features = []
+
+    try:
+        n_features = layer.GetFeatureCount()
+
+        for j in range(n_features):
+            features.append(layer.GetNextFeature())
+    except Exception as e:
+        print(f"Error on layer {layer.GetDescription()} {e}")
+
+    return features
+
+
+def getFeatureInfo(feature: ogr.Feature):
+    if feature is not None:
+        return feature.ExportToJson()
